@@ -6,7 +6,8 @@ import { useSpaces } from "../../../../context/SpaceContext";
 
 export default function ConversationPage() {
   const params = useParams();
-  const { spaces, addMessage } = useSpaces();
+  const { spaces, setSpaces, addMessageToSpaces, addAgentMessageToSpaces } =
+    useSpaces();
 
   const [newMessage, setNewMessage] = useState("");
 
@@ -32,7 +33,6 @@ export default function ConversationPage() {
   return (
     <div>
       <h1>{conversation.title}</h1>
-      {/* Messages will go here */}
 
       {conversation.messages.map((msg) => (
         <div
@@ -59,7 +59,30 @@ export default function ConversationPage() {
         className="mt-2 px-4 py-2 bg-blue-500 text-white rounded"
         onClick={() => {
           if (!newMessage) return;
-          addMessage(spaceId, convId, newMessage);
+
+          setSpaces((prev) => {
+            let updated = addMessageToSpaces(
+              prev,
+              spaceId!,
+              convId!,
+              newMessage
+            );
+
+            space!.agents.forEach((agent) => {
+              const agentReply = agent.persona || `Hello, I'm ${agent.name}!`;
+
+              updated = addAgentMessageToSpaces(
+                updated,
+                spaceId!,
+                convId!,
+                agent.id,
+                agentReply
+              );
+            });
+
+            return updated;
+          });
+
           setNewMessage("");
         }}
       >

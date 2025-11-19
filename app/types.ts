@@ -2,6 +2,7 @@ export type Agent = {
   id: string;
   name: string;
   persona: string;
+  messages?: Message[];
 };
 
 export type Message = {

@@ -5,15 +5,28 @@ import { Message, Space } from "../types";
 
 type SpaceContextType = {
   spaces: Space[];
+  setSpaces: React.Dispatch<React.SetStateAction<Space[]>>;
   addSpace: (name: string) => void;
   addConversation: (spaceId: string) => void;
-  addMessage: (spaceId: string, convId: string, content: string) => void;
   addAgent: (spaceId: string) => void;
   updateAgentPersona: (
     spaceId: string,
     agentId: string,
     persona: string
   ) => void;
+  addMessageToSpaces: (
+    prevSpaces: Space[],
+    spaceId: string,
+    convId: string,
+    content: string
+  ) => Space[];
+  addAgentMessageToSpaces: (
+    prevSpaces: Space[],
+    spaceId: string,
+    convId: string,
+    agentId: string,
+    content: string
+  ) => Space[];
 };
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -36,18 +49,16 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
       createdAt: new Date(),
     };
 
-    const updatedSpaces = spaces.map((space) => {
-      if (space.id === spaceId) {
-        return {
-          ...space,
-          conversations: [...space.conversations, newConversation],
-        };
-      } else {
-        return space;
-      }
-    });
-
-    setSpaces(updatedSpaces);
+    setSpaces((prev) =>
+      prev.map((space) =>
+        space.id === spaceId
+          ? {
+              ...space,
+              conversations: [...space.conversations, newConversation],
+            }
+          : space
+      )
+    );
   };
 
   const addAgent = (spaceId: string) => {
@@ -56,18 +67,14 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
       name: `New Agent`,
       persona: "Helpful assistant",
     };
-    const updatedSpaces = spaces.map((space) => {
-      if (space.id === spaceId) {
-        return {
-          ...space,
-          agents: [...space.agents, newAgent],
-        };
-      } else {
-        return space;
-      }
-    });
 
-    setSpaces(updatedSpaces);
+    setSpaces((prev) =>
+      prev.map((space) =>
+        space.id === spaceId
+          ? { ...space, agents: [...space.agents, newAgent] }
+          : space
+      )
+    );
   };
 
   const updateAgentPersona = (
@@ -75,70 +82,84 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
     agentId: string,
     persona: string
   ) => {
-    const updatedSpaces = spaces.map((space) => {
-      if (space.id === spaceId) {
-        const updatedAgents = space.agents.map((agent) => {
-          if (agent.id === agentId) {
-            return {
-              ...agent,
-              persona,
-            };
-          } else {
-            return agent;
-          }
-        });
-        return {
-          ...space,
-          agents: updatedAgents,
-        };
-      } else {
-        return space;
-      }
-    });
-
-    setSpaces(updatedSpaces);
+    setSpaces((prev) =>
+      prev.map((space) =>
+        space.id !== spaceId
+          ? space
+          : {
+              ...space,
+              agents: space.agents.map((agent) =>
+                agent.id === agentId ? { ...agent, persona } : agent
+              ),
+            }
+      )
+    );
   };
 
-  const addMessage = (spaceId: string, convId: string, content: string) => {
+  const addMessageToSpaces = (
+    prevSpaces: Space[],
+    spaceId: string,
+    convId: string,
+    content: string
+  ): Space[] => {
     const newMessage: Message = {
       id: crypto.randomUUID(),
       role: "user",
       content,
     };
 
-    const updatedSpaces = spaces.map((space) => {
-      if (space.id === spaceId) {
-        const updatedConversations = space.conversations.map((conversation) => {
-          if (conversation.id === convId) {
-            return {
-              ...conversation,
-              messages: [...conversation.messages, newMessage],
-            };
-          } else {
-            return conversation;
+    return prevSpaces.map((space) =>
+      space.id !== spaceId
+        ? space
+        : {
+            ...space,
+            conversations: space.conversations.map((conv) =>
+              conv.id !== convId
+                ? conv
+                : { ...conv, messages: [...conv.messages, newMessage] }
+            ),
           }
-        });
-        return {
-          ...space,
-          conversations: updatedConversations,
-        };
-      } else {
-        return space;
-      }
-    });
+    );
+  };
 
-    setSpaces(updatedSpaces);
+  const addAgentMessageToSpaces = (
+    prevSpaces: Space[],
+    spaceId: string,
+    convId: string,
+    agentId: string,
+    content: string
+  ): Space[] => {
+    const newMessage: Message = {
+      id: crypto.randomUUID(),
+      role: "agent",
+      content,
+    };
+
+    return prevSpaces.map((space) =>
+      space.id !== spaceId
+        ? space
+        : {
+            ...space,
+            conversations: space.conversations.map((conv) =>
+              conv.id !== convId
+                ? conv
+                : { ...conv, messages: [...conv.messages, newMessage] }
+            ),
+          }
+    );
   };
 
   return (
     <SpaceContext.Provider
       value={{
         spaces,
+        setSpaces,
         addSpace,
         addConversation,
-        addMessage,
         addAgent,
         updateAgentPersona,
+        addMessageToSpaces,
+        addAgentMessageToSpaces,
       }}
     >
       {children}
