@@ -1,6 +1,7 @@
 export type Agent = {
   id: string;
   name: string;
+  persona: string;
 };
 
 export type Message = {

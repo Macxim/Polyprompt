@@ -11,7 +11,7 @@ export default function SpacePage() {
   const spaceId = params.id as string;
 
   const space = spaces.find((s) => s.id === spaceId);
-  const { addConversation, addAgent } = useSpaces();
+  const { addConversation, addAgent, updateAgentPersona } = useSpaces();
 
   if (!space) {
     return (
@@ -39,7 +39,17 @@ export default function SpacePage() {
           </h2>
           <ul>
             {space.agents.map((agent) => (
-              <li key={agent.id}>{agent.name}</li>
+              <li key={agent.id}>
+                {agent.name}
+                <input
+                  className="ml-2"
+                  type="text"
+                  value={agent.persona}
+                  onChange={(e) =>
+                    updateAgentPersona(space.id, agent.id, e.target.value)
+                  }
+                />
+              </li>
             ))}
           </ul>
         </div>

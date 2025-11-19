@@ -7,8 +7,13 @@ type SpaceContextType = {
   spaces: Space[];
   addSpace: (name: string) => void;
   addConversation: (spaceId: string) => void;
-  addAgent: (spaceId: string) => void;
   addMessage: (spaceId: string, convId: string, content: string) => void;
+  addAgent: (spaceId: string) => void;
+  updateAgentPersona: (
+    spaceId: string,
+    agentId: string,
+    persona: string
+  ) => void;
 };
 
 const SpaceContext = createContext<SpaceContextType | undefined>(undefined);
@@ -49,12 +54,42 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
     const newAgent = {
       id: crypto.randomUUID(),
       name: `New Agent`,
+      persona: "Helpful assistant",
     };
     const updatedSpaces = spaces.map((space) => {
       if (space.id === spaceId) {
         return {
           ...space,
           agents: [...space.agents, newAgent],
+        };
+      } else {
+        return space;
+      }
+    });
+
+    setSpaces(updatedSpaces);
+  };
+
+  const updateAgentPersona = (
+    spaceId: string,
+    agentId: string,
+    persona: string
+  ) => {
+    const updatedSpaces = spaces.map((space) => {
+      if (space.id === spaceId) {
+        const updatedAgents = space.agents.map((agent) => {
+          if (agent.id === agentId) {
+            return {
+              ...agent,
+              persona,
+            };
+          } else {
+            return agent;
+          }
+        });
+        return {
+          ...space,
+          agents: updatedAgents,
         };
       } else {
         return space;
@@ -97,7 +132,14 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
 
   return (
     <SpaceContext.Provider
-      value={{ spaces, addSpace, addConversation, addMessage, addAgent }}
+      value={{
+        spaces,
+        addSpace,
+        addConversation,
+        addMessage,
+        addAgent,
+        updateAgentPersona,
+      }}
     >
       {children}
     </SpaceContext.Provider>
