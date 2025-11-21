@@ -66,6 +66,7 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
       id: crypto.randomUUID(),
       name: `New Agent`,
       persona: "Helpful assistant",
+      description: "",
     };
 
     setSpaces((prev) =>
