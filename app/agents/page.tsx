@@ -13,6 +13,7 @@ export default function AgentsPage() {
   const [description, setDescription] = useState("");
   const [nameError, setNameError] = useState("");
   const [personaError, setPersonaError] = useState("");
+  const [descriptionError, setDescriptionError] = useState("");
 
   const handleCreate = () => {
     let valid = true;
@@ -25,13 +26,20 @@ export default function AgentsPage() {
     }
 
     if (!persona.trim()) {
-      setPersonaError("Persona is required");
+      setPersonaError("Persona/Role is required");
       valid = false;
     } else {
       setPersonaError("");
     }
 
-    if (!valid) return; // stop if validation fails
+    if (description.length > 200) {
+      setDescriptionError("Description cannot exceed 200 characters");
+      valid = false;
+    } else {
+      setDescriptionError("");
+    }
+
+    if (!valid) return;
 
     const newAgent: Agent = {
       id: crypto.randomUUID(),
@@ -42,12 +50,9 @@ export default function AgentsPage() {
 
     setAgents((prev) => [...prev, newAgent]);
 
-    // Reset form
     setName("");
     setPersona("");
     setDescription("");
-    setNameError("");
-    setPersonaError("");
     setIsModalOpen(false);
   };
 
@@ -115,12 +120,26 @@ export default function AgentsPage() {
                   Description
                 </label>
 
-                <textarea
-                  className="w-full border rounded px-3 py-2"
-                  rows={3}
-                  value={description}
-                  onChange={(e) => setDescription(e.target.value)}
-                />
+                <div className="relative">
+                  <textarea
+                    className="w-full border rounded px-3 py-2"
+                    rows={3}
+                    value={description}
+                    onChange={(e) => {
+                      setDescription(e.target.value);
+                      if (descriptionError) setDescriptionError(""); // clear error as user types
+                    }}
+                    maxLength={200} // optional: enforce max length in input
+                  />
+                  <div className="text-right text-sm text-gray-500 mt-1">
+                    {description.length}/200
+                  </div>
+                </div>
+                {descriptionError && (
+                  <p className="text-red-600 text-sm mt-1">
+                    {descriptionError}
+                  </p>
+                )}
               </div>
             </div>
 
