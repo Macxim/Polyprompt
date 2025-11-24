@@ -15,6 +15,8 @@ export default function AgentsPage() {
   const [personaError, setPersonaError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
 
+  const [bannerMessage, setBannerMessage] = useState<string | null>(null);
+
   const handleCreate = () => {
     let valid = true;
 
@@ -54,113 +56,136 @@ export default function AgentsPage() {
     setPersona("");
     setDescription("");
     setIsModalOpen(false);
+    setBannerMessage("Agent created successfully.");
   };
 
   return (
-    <div className="p-8">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold">Agents</h1>
+    <>
+      <div aria-live="polite" aria-atomic="true" className="sr-only">
+        {bannerMessage}
+      </div>
 
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="px-4 py-2 bg-blue-600 text-white rounded"
+      {bannerMessage && (
+        <div
+          role="status"
+          className="mb-4 border border-green-500 bg-green-50 text-green-800 px-4 py-3 rounded flex justify-between items-start"
         >
-          + Create Agent
-        </button>
-      </div>
+          <span>{bannerMessage}</span>
 
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {agents.map((agent) => (
-          <AgentCard key={agent.id} agent={agent} />
-        ))}
-      </div>
-
-      {isModalOpen && (
-        <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg">
-            <h2 className="text-2xl font-semibold mb-4">Create Agent</h2>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Name</label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
-                  value={name}
-                  onChange={(e) => {
-                    setName(e.target.value);
-                    if (nameError) setNameError("");
-                  }}
-                />
-                {nameError && (
-                  <p className="text-red-600 text-sm mt-1">{nameError}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Persona
-                </label>
-                <input
-                  type="text"
-                  className="w-full border rounded px-3 py-2"
-                  value={persona}
-                  onChange={(e) => {
-                    setPersona(e.target.value);
-                    if (personaError) setPersonaError("");
-                  }}
-                />
-                {personaError && (
-                  <p className="text-red-600 text-sm mt-1">{personaError}</p>
-                )}
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium mb-1">
-                  Description
-                </label>
-
-                <div className="relative">
-                  <textarea
-                    className="w-full border rounded px-3 py-2"
-                    rows={3}
-                    value={description}
-                    onChange={(e) => {
-                      setDescription(e.target.value);
-                      if (descriptionError) setDescriptionError(""); // clear error as user types
-                    }}
-                    maxLength={200} // optional: enforce max length in input
-                  />
-                  <div className="text-right text-sm text-gray-500 mt-1">
-                    {description.length}/200
-                  </div>
-                </div>
-                {descriptionError && (
-                  <p className="text-red-600 text-sm mt-1">
-                    {descriptionError}
-                  </p>
-                )}
-              </div>
-            </div>
-
-            <div className="flex justify-end gap-3 mt-6">
-              <button
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border rounded"
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={handleCreate}
-                className="px-4 py-2 bg-blue-600 text-white rounded"
-              >
-                Create
-              </button>
-            </div>
-          </div>
+          <button
+            onClick={() => setBannerMessage(null)}
+            className="ml-4 text-green-700 hover:text-green-900 font-semibold"
+          >
+            Dismiss
+          </button>
         </div>
       )}
-    </div>
+
+      <div className="p-8">
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">Agents</h1>
+
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="px-4 py-2 bg-blue-600 text-white rounded"
+          >
+            + Create Agent
+          </button>
+        </div>
+
+        <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
+          {agents.map((agent) => (
+            <AgentCard key={agent.id} agent={agent} />
+          ))}
+        </div>
+
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg">
+              <h2 className="text-2xl font-semibold mb-4">Create Agent</h2>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-1">Name</label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-3 py-2"
+                    value={name}
+                    onChange={(e) => {
+                      setName(e.target.value);
+                      if (nameError) setNameError("");
+                    }}
+                  />
+                  {nameError && (
+                    <p className="text-red-600 text-sm mt-1">{nameError}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Persona
+                  </label>
+                  <input
+                    type="text"
+                    className="w-full border rounded px-3 py-2"
+                    value={persona}
+                    onChange={(e) => {
+                      setPersona(e.target.value);
+                      if (personaError) setPersonaError("");
+                    }}
+                  />
+                  {personaError && (
+                    <p className="text-red-600 text-sm mt-1">{personaError}</p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium mb-1">
+                    Description
+                  </label>
+
+                  <div className="relative">
+                    <textarea
+                      className="w-full border rounded px-3 py-2"
+                      rows={3}
+                      value={description}
+                      onChange={(e) => {
+                        setDescription(e.target.value);
+                        if (descriptionError) setDescriptionError(""); // clear error as user types
+                      }}
+                      maxLength={200} // optional: enforce max length in input
+                    />
+                    <div className="text-right text-sm text-gray-500 mt-1">
+                      {description.length}/200
+                    </div>
+                  </div>
+                  {descriptionError && (
+                    <p className="text-red-600 text-sm mt-1">
+                      {descriptionError}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 mt-6">
+                <button
+                  onClick={() => setIsModalOpen(false)}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={handleCreate}
+                  className="px-4 py-2 bg-blue-600 text-white rounded"
+                >
+                  Create
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </>
   );
 }
