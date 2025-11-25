@@ -16,8 +16,9 @@ export default function AgentsPage() {
   const [descriptionError, setDescriptionError] = useState("");
 
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
+  const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
 
-  const handleCreate = () => {
+  const handleSubmit = () => {
     let valid = true;
 
     if (!name.trim()) {
@@ -43,20 +44,42 @@ export default function AgentsPage() {
 
     if (!valid) return;
 
-    const newAgent: Agent = {
-      id: crypto.randomUUID(),
-      name,
-      persona,
-      description,
-    };
-
-    setAgents((prev) => [...prev, newAgent]);
+    if (editingAgent) {
+      // Edit existing agent
+      const updatedAgent: Agent = {
+        ...editingAgent,
+        name,
+        persona,
+        description,
+      };
+      setAgents((prev) =>
+        prev.map((a) => (a.id === updatedAgent.id ? updatedAgent : a))
+      );
+      setBannerMessage("Agent updated successfully.");
+      setEditingAgent(null);
+    } else {
+      const newAgent: Agent = {
+        id: crypto.randomUUID(),
+        name,
+        persona,
+        description,
+      };
+      setAgents((prev) => [...prev, newAgent]);
+      setBannerMessage("Agent created successfully.");
+    }
 
     setName("");
     setPersona("");
     setDescription("");
     setIsModalOpen(false);
-    setBannerMessage("Agent created successfully.");
+  };
+
+  const handleEdit = (agent: Agent) => {
+    setEditingAgent(agent);
+    setName(agent.name);
+    setPersona(agent.persona);
+    setDescription(agent.description || "");
+    setIsModalOpen(true);
   };
 
   return (
@@ -86,8 +109,16 @@ export default function AgentsPage() {
           <h1 className="text-3xl font-bold">Agents</h1>
 
           <button
-            onClick={() => setIsModalOpen(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            onClick={() => {
+              setEditingAgent(null);
+              setName("");
+              setPersona("");
+              setDescription("");
+              setIsModalOpen(true);
+              setNameError("");
+              setPersonaError("");
+              setDescriptionError("");
+            }}
           >
             + Create Agent
           </button>
@@ -95,14 +126,16 @@ export default function AgentsPage() {
 
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} />
+            <AgentCard key={agent.id} agent={agent} onEdit={handleEdit} />
           ))}
         </div>
 
         {isModalOpen && (
           <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
             <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg">
-              <h2 className="text-2xl font-semibold mb-4">Create Agent</h2>
+              <h2 className="text-2xl font-semibold mb-4">
+                {editingAgent ? "Edit Agent" : "Create New Agent"}
+              </h2>
 
               <div className="space-y-4">
                 <div>
@@ -169,17 +202,20 @@ export default function AgentsPage() {
 
               <div className="flex justify-end gap-3 mt-6">
                 <button
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingAgent(null);
+                  }}
                   className="px-4 py-2 border rounded"
                 >
                   Cancel
                 </button>
 
                 <button
-                  onClick={handleCreate}
+                  onClick={handleSubmit}
                   className="px-4 py-2 bg-blue-600 text-white rounded"
                 >
-                  Create
+                  Confirm
                 </button>
               </div>
             </div>
