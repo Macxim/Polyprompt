@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import AgentCard from "./components/AgentCard";
 import { Agent } from "../types";
 
 export default function AgentsPage() {
   const [agents, setAgents] = useState<Agent[]>([]);
+  const [, startTransition] = useTransition();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   const [name, setName] = useState("");
@@ -86,6 +87,25 @@ export default function AgentsPage() {
   const handleDelete = (agent: Agent) => {
     setAgentToDelete(agent);
   };
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const stored = localStorage.getItem("agents");
+      if (stored) {
+        startTransition(() => {
+          setAgents(JSON.parse(stored));
+        });
+      }
+    } catch {}
+  }, []);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("agents", JSON.stringify(agents));
+    } catch {}
+  }, [agents]);
 
   return (
     <>
