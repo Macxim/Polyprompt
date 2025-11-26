@@ -17,6 +17,7 @@ export default function AgentsPage() {
 
   const [bannerMessage, setBannerMessage] = useState<string | null>(null);
   const [editingAgent, setEditingAgent] = useState<Agent | null>(null);
+  const [agentToDelete, setAgentToDelete] = useState<Agent | null>(null);
 
   const handleSubmit = () => {
     let valid = true;
@@ -82,6 +83,10 @@ export default function AgentsPage() {
     setIsModalOpen(true);
   };
 
+  const handleDelete = (agent: Agent) => {
+    setAgentToDelete(agent);
+  };
+
   return (
     <>
       <div aria-live="polite" aria-atomic="true" className="sr-only">
@@ -126,7 +131,12 @@ export default function AgentsPage() {
 
         <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
           {agents.map((agent) => (
-            <AgentCard key={agent.id} agent={agent} onEdit={handleEdit} />
+            <AgentCard
+              key={agent.id}
+              agent={agent}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+            />
           ))}
         </div>
 
@@ -216,6 +226,40 @@ export default function AgentsPage() {
                   className="px-4 py-2 bg-blue-600 text-white rounded"
                 >
                   Confirm
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {agentToDelete && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
+            <div className="bg-white p-6 rounded-lg w-full max-w-sm shadow-lg">
+              <h2 className="text-xl font-semibold mb-4">Delete Agent</h2>
+              <p className="text-gray-700 mb-6">
+                Are you sure you want to delete{" "}
+                <strong>{agentToDelete.name}</strong>?
+              </p>
+
+              <div className="flex justify-end gap-3">
+                <button
+                  onClick={() => setAgentToDelete(null)}
+                  className="px-4 py-2 border rounded"
+                >
+                  Cancel
+                </button>
+
+                <button
+                  onClick={() => {
+                    setAgents((prev) =>
+                      prev.filter((a) => a.id !== agentToDelete.id)
+                    );
+                    setBannerMessage("Agent deleted successfully.");
+                    setAgentToDelete(null);
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded"
+                >
+                  Delete
                 </button>
               </div>
             </div>
