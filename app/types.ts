@@ -24,3 +24,9 @@ export type Space = {
   agents: Agent[];
   conversations: Conversation[];
 };
+
+export type AppState = {
+  spaces: Space[];
+  selectedSpaceId?: string;
+  selectedAgentId?: string;
+};
