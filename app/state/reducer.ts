@@ -28,6 +28,9 @@ export const reducer = (state: AppState, action: Action): AppState => {
         agents: state.agents.filter((a) => a.id !== action.payload.id),
       };
 
+    case "CLEAR_ACTIVE_AGENT":
+      return { ...state, activeAgentId: null };
+
     //
     // ────────────────────────────────
     //  SPACES
@@ -42,8 +45,8 @@ export const reducer = (state: AppState, action: Action): AppState => {
     case "UPDATE_SPACE":
       return {
         ...state,
-        spaces: state.spaces.map((space) =>
-          space.id === action.payload.id ? action.payload : space
+        spaces: state.spaces.map((s) =>
+          s.id === action.id ? { ...s, ...action.changes } : s
         ),
       };
 

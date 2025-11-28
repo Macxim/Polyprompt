@@ -1,17 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import { useSpaces } from "../../context/SpaceContext";
 import { useParams, useRouter } from "next/navigation";
+import { useApp } from "@/app/state/AppProvider";
 
 export default function SpacePage() {
-  const { spaces } = useSpaces();
+  const { state, dispatch } = useApp();
+  const spaces = state.spaces;
+
   const params = useParams();
   const router = useRouter();
   const spaceId = params.id as string;
 
   const space = spaces.find((s) => s.id === spaceId);
-  const { addConversation, addAgent, updateAgentPersona } = useSpaces();
 
   if (!space) {
     return (
@@ -27,6 +28,57 @@ export default function SpacePage() {
     );
   }
 
+  /* ---------------------- ACTIONS ---------------------- */
+
+  const addConversation = () => {
+    dispatch({
+      type: "UPDATE_SPACE",
+      id: space.id,
+      changes: {
+        conversations: [
+          ...space.conversations,
+          {
+            id: crypto.randomUUID(),
+            title: "New Conversation",
+            messages: [],
+          },
+        ],
+      },
+    });
+  };
+
+  const addAgent = () => {
+    dispatch({
+      type: "UPDATE_SPACE",
+      id: space.id,
+      changes: {
+        agents: [
+          ...space.agents,
+          {
+            id: crypto.randomUUID(),
+            name: "New Agent",
+            persona: "",
+            description: "",
+          },
+        ],
+      },
+    });
+  };
+
+  const updateAgentPersona = (agentId: string, persona: string) => {
+    const updatedAgents = space.agents.map((agent) =>
+      agent.id === agentId ? { ...agent, persona } : agent
+    );
+
+    dispatch({
+      type: "UPDATE_SPACE",
+      id: space.id,
+      changes: { agents: updatedAgents },
+    });
+  };
+
+  /* ------------------------------------------------------ */
+
   return (
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-3xl font-bold mb-2">{space.name}</h1>
@@ -39,15 +91,12 @@ export default function SpacePage() {
           </h2>
           <ul>
             {space.agents.map((agent) => (
-              <li key={agent.id}>
+              <li key={agent.id} className="py-1">
                 {agent.name}
                 <input
-                  className="ml-2"
-                  type="text"
+                  className="ml-2 border px-2 py-1"
                   value={agent.persona}
-                  onChange={(e) =>
-                    updateAgentPersona(space.id, agent.id, e.target.value)
-                  }
+                  onChange={(e) => updateAgentPersona(agent.id, e.target.value)}
                 />
               </li>
             ))}
@@ -60,10 +109,10 @@ export default function SpacePage() {
           </h2>
           <ul>
             {space.conversations.map((conv) => (
-              <li key={conv.id}>
+              <li key={conv.id} className="py-1">
                 <Link
-                  key={space.id}
                   href={`/space/${space.id}/conversation/${conv.id}`}
+                  className="text-blue-600 underline"
                 >
                   {conv.title}
                 </Link>
@@ -73,29 +122,27 @@ export default function SpacePage() {
         </div>
       </div>
 
-      <div className="flex items-center">
+      <div className="flex gap-3 mt-4">
         <button
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-          onClick={() => addConversation(space.id)}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={addConversation}
         >
           Add Conversation
         </button>
         <button
-          className="mt-4 px-4 py-2 bg-blue-500 text-white rounded"
-          onClick={() => addAgent(space.id)}
+          className="px-4 py-2 bg-blue-500 text-white rounded"
+          onClick={addAgent}
         >
           Add Agent
         </button>
       </div>
 
-      <div className="">
-        <button
-          className="mt-6 underline text-blue-600"
-          onClick={() => router.push("/")}
-        >
-          Back to spaces
-        </button>
-      </div>
+      <button
+        className="mt-6 underline text-blue-600"
+        onClick={() => router.push("/")}
+      >
+        Back to spaces
+      </button>
     </div>
   );
 }

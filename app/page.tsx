@@ -1,12 +1,48 @@
 "use client";
 
+import { useState, useRef } from "react";
 import Link from "next/link";
-import { useSpaces } from "./context/SpaceContext";
-import { useState } from "react";
+import { useApp } from "./state/AppProvider";
 
 export default function Home() {
-  const { spaces, addSpace } = useSpaces();
+  const { dispatch, state } = useApp();
+
   const [name, setName] = useState("");
+  const [nameError, setNameError] = useState("");
+  const nameInputRef = useRef<HTMLInputElement>(null);
+
+  const MAX_LENGTH = 40;
+
+  const handleAddSpace = () => {
+    if (!name.trim()) {
+      setNameError("Space name is required");
+      nameInputRef.current?.focus();
+      return;
+    }
+
+    if (name.length > MAX_LENGTH) {
+      setNameError(`Name cannot exceed ${MAX_LENGTH} characters`);
+      nameInputRef.current?.focus();
+      return;
+    }
+
+    dispatch({
+      type: "ADD_SPACE",
+      payload: {
+        id: crypto.randomUUID(),
+        name,
+        agents: [],
+        conversations: [],
+      },
+    });
+
+    dispatch({
+      type: "SET_BANNER",
+      payload: { message: "Space created successfully." },
+    });
+
+    setName("");
+  };
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
@@ -29,29 +65,50 @@ export default function Home() {
       </div>
 
       {/* Add new space */}
-      <div className="mb-6 flex gap-2">
-        <input
-          className="border px-2 py-1 flex-1 rounded"
-          value={name}
-          onChange={(e) => setName(e.target.value)}
-          placeholder="New space name"
-        />
-        <button
-          className="bg-blue-500 text-white px-4 py-1 rounded"
-          onClick={() => {
-            if (name.trim() !== "") {
-              addSpace(name);
-              setName("");
-            }
-          }}
-        >
-          Add Space
-        </button>
+      <div className="mb-6 flex flex-col gap-1">
+        <div className="flex gap-2">
+          <input
+            ref={nameInputRef}
+            className={`border px-2 py-1 flex-1 rounded ${
+              nameError ? "border-red-500" : ""
+            }`}
+            value={name}
+            onChange={(e) => {
+              const value = e.target.value;
+
+              if (value.length <= MAX_LENGTH) {
+                setName(value);
+                if (nameError) setNameError(""); // clear error as user types
+              }
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault(); // prevent accidental form submission
+                handleAddSpace();
+              }
+            }}
+            placeholder="New space name"
+          />
+
+          <button
+            className="bg-blue-500 text-white px-4 py-1 rounded"
+            onClick={handleAddSpace}
+          >
+            Add Space
+          </button>
+        </div>
+
+        {/* Character counter */}
+        <div className="text-right text-xs text-gray-500">
+          {name.length}/{MAX_LENGTH}
+        </div>
+
+        {nameError && <p className="text-red-600 text-sm">{nameError}</p>}
       </div>
 
       {/* List spaces */}
       <div className="space-y-4">
-        {spaces.map((space) => (
+        {state.spaces.map((space) => (
           <Link key={space.id} href={`/space/${space.id}`}>
             <div className="p-4 border rounded shadow hover:shadow-md transition cursor-pointer">
               <h2 className="font-bold text-lg">{space.name}</h2>

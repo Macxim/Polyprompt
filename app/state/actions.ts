@@ -6,9 +6,10 @@ export type Action =
   | { type: "UPDATE_AGENT"; payload: Agent }
   | { type: "DELETE_AGENT"; payload: { id: string } }
   | { type: "ADD_SPACE"; payload: Space }
-  | { type: "UPDATE_SPACE"; payload: Space }
+  | { type: "UPDATE_SPACE"; id: string; changes: Partial<Space> }
   | { type: "DELETE_SPACE"; payload: { id: string } }
-  | { type: "SET_ACTIVE_SPACE"; payload: { id: string | null } }
+  | { type: "SET_ACTIVE_SPACE"; payload: { id: string } }
+  | { type: "CLEAR_ACTIVE_AGENT" }
   | { type: "SET_ACTIVE_AGENT"; payload: { id: string | null } }
   | {
       type: "ADD_MESSAGE";
