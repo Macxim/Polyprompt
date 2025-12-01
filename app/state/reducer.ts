@@ -3,6 +3,11 @@ import { Action } from "./actions";
 
 export const reducer = (state: AppState, action: Action): AppState => {
   switch (action.type) {
+    case "HYDRATE_APP":
+      return {
+        ...action.payload,
+      };
+
     //
     // ────────────────────────────────
     //  AGENTS

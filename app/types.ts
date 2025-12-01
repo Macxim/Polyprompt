@@ -26,7 +26,13 @@ export type Space = {
 };
 
 export type AppState = {
+  agents: Agent[];
   spaces: Space[];
-  selectedSpaceId?: string;
-  selectedAgentId?: string;
+  activeSpaceId: string | null;
+  activeAgentId: string | null;
+  ui: {
+    isAgentModalOpen: boolean;
+    isSpaceModalOpen: boolean;
+    bannerMessage: string | null;
+  };
 };

@@ -1,4 +1,4 @@
-import { Agent, Space, Message } from "../types";
+import { Agent, AppState, Space, Message } from "../types";
 
 // Every possible action the app can perform:
 export type Action =
@@ -19,4 +19,5 @@ export type Action =
   | { type: "CLOSE_AGENT_MODAL" }
   | { type: "OPEN_SPACE_MODAL" }
   | { type: "CLOSE_SPACE_MODAL" }
-  | { type: "SET_BANNER"; payload: { message: string | null } };
+  | { type: "SET_BANNER"; payload: { message: string | null } }
+  | { type: "HYDRATE_APP"; payload: AppState };
