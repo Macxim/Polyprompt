@@ -6,6 +6,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
     case "HYDRATE_APP":
       return {
         ...action.payload,
+        _hydrated: true,
       };
 
     //

@@ -10,6 +10,7 @@ export type AppState = {
     isSpaceModalOpen: boolean;
     bannerMessage: string | null;
   };
+  _hydrated: boolean;
 };
 
 export const initialAppState: AppState = {
@@ -22,4 +23,5 @@ export const initialAppState: AppState = {
     isSpaceModalOpen: false,
     bannerMessage: null,
   },
+  _hydrated: false,
 };

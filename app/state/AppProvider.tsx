@@ -39,7 +39,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Persist state to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem("appState", JSON.stringify(state));
+    // Avoid saving the initial empty state before HYDRATE
+    if (state._hydrated) {
+      localStorage.setItem("appState", JSON.stringify(state));
+    }
   }, [state]);
 
   return (
