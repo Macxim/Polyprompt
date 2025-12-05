@@ -65,6 +65,11 @@ export default function SpacePage() {
     });
   };
 
+  const deleteSpace = () => {
+    dispatch({ type: "DELETE_SPACE", payload: { id: space.id } });
+    router.push("/");
+  };
+
   const updateAgentPersona = (agentId: string, persona: string) => {
     const updatedAgents = space.agents.map((agent) =>
       agent.id === agentId ? { ...agent, persona } : agent
@@ -134,6 +139,10 @@ export default function SpacePage() {
           onClick={addAgent}
         >
           Add Agent
+        </button>
+
+        <button className="text-red-500 underline" onClick={deleteSpace}>
+          Delete
         </button>
       </div>
 
