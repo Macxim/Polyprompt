@@ -8,7 +8,7 @@ export type AppState = {
   ui: {
     isAgentModalOpen: boolean;
     isSpaceModalOpen: boolean;
-    bannerMessage: string | null;
+    bannerMessage: { message: string | null };
   };
   _hydrated: boolean;
 };
@@ -21,7 +21,7 @@ export const initialAppState: AppState = {
   ui: {
     isAgentModalOpen: false,
     isSpaceModalOpen: false,
-    bannerMessage: null,
+    bannerMessage: { message: null },
   },
   _hydrated: false,
 };

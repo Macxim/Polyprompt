@@ -132,7 +132,10 @@ export const reducer = (state: AppState, action: Action): AppState => {
     case "SET_BANNER":
       return {
         ...state,
-        ui: { ...state.ui, bannerMessage: action.payload.message },
+        ui: {
+          ...state.ui,
+          bannerMessage: action.payload,
+        },
       };
 
     default:

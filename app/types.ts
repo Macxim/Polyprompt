@@ -33,6 +33,6 @@ export type AppState = {
   ui: {
     isAgentModalOpen: boolean;
     isSpaceModalOpen: boolean;
-    bannerMessage: string | null;
+    bannerMessage: { message: string | null };
   };
 };

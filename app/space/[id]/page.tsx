@@ -3,9 +3,12 @@
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
+import { useState } from "react";
 
 export default function SpacePage() {
   const { state, dispatch } = useApp();
+  const [deleting, setDeleting] = useState(false);
+
   const spaces = state.spaces;
 
   const params = useParams();
@@ -14,7 +17,7 @@ export default function SpacePage() {
 
   const space = spaces.find((s) => s.id === spaceId);
 
-  if (!space) {
+  if (!space && !deleting) {
     return (
       <div className="p-8">
         <p className="text-red-500">Space not found.</p>
@@ -27,6 +30,8 @@ export default function SpacePage() {
       </div>
     );
   }
+
+  if (!space) return null;
 
   /* ---------------------- ACTIONS ---------------------- */
 
@@ -66,8 +71,14 @@ export default function SpacePage() {
   };
 
   const deleteSpace = () => {
+    setDeleting(true);
     dispatch({ type: "DELETE_SPACE", payload: { id: space.id } });
-    router.push("/");
+    dispatch({
+      type: "SET_BANNER",
+      payload: { message: "Space deleted successfully." },
+    });
+
+    router.replace("/");
   };
 
   const updateAgentPersona = (agentId: string, persona: string) => {
