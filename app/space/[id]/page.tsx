@@ -8,6 +8,8 @@ import { useState } from "react";
 export default function SpacePage() {
   const { state, dispatch } = useApp();
   const [deleting, setDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [newName, setNewName] = useState("");
 
   const spaces = state.spaces;
 
@@ -34,6 +36,17 @@ export default function SpacePage() {
   if (!space) return null;
 
   /* ---------------------- ACTIONS ---------------------- */
+
+  const handleRename = () => {
+    if (newName.trim() && newName !== space.name) {
+      dispatch({
+        type: "UPDATE_SPACE",
+        id: space.id,
+        changes: { name: newName.trim() },
+      });
+    }
+    setIsEditing(false);
+  };
 
   const addConversation = () => {
     dispatch({
@@ -97,7 +110,26 @@ export default function SpacePage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-3xl font-bold mb-2">{space.name}</h1>
+      {isEditing ? (
+        <input
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onBlur={() => handleRename()}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") handleRename();
+          }}
+          autoFocus
+          className="border px-2 py-1 rounded"
+        />
+      ) : (
+        <div className="flex items-center gap-4">
+          <h1 className="text-3xl font-bold">{space.name}</h1>
+          <button className="text-sm" onClick={() => setIsEditing(true)}>
+            Edit
+          </button>
+        </div>
+      )}
+
       <p className="text-gray-600 mb-6">ID: {space.id}</p>
 
       <div className="space-y-4">
