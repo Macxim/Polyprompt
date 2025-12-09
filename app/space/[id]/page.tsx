@@ -9,6 +9,8 @@ export default function SpacePage() {
   const { state, dispatch } = useApp();
   const [deleting, setDeleting] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
+  const [isAddingAgent, setIsAddingAgent] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState("");
   const [newName, setNewName] = useState("");
 
   const spaces = state.spaces;
@@ -18,6 +20,9 @@ export default function SpacePage() {
   const spaceId = params.id as string;
 
   const space = spaces.find((s) => s.id === spaceId);
+  const spaceAgents = space
+    ? state.agents.filter((a) => (space.agentIds || []).includes(a.id))
+    : [];
 
   if (!space && !deleting) {
     return (
@@ -49,7 +54,7 @@ export default function SpacePage() {
   };
 
   const addConversation = () => {
-    if (!space || !space.agents || space.agents.length === 0) {
+    if (!space || !space.agentIds || space.agentIds.length === 0) {
       dispatch({
         type: "SET_BANNER",
         payload: { message: "Add an agent before starting a conversation." },
@@ -73,22 +78,48 @@ export default function SpacePage() {
     });
   };
 
-  const addAgent = () => {
+  /*
+   * NEW LOGIC: "Add Agent" now just saves a new agent globally and links it.
+   * We will keep this function for "Create new" via the UI,
+   * BUT we also need a function to link an *existing* agent.
+   */
+  const handleCreateAndAddAgent = () => {
+    const newAgentId = crypto.randomUUID();
+    const newAgent = {
+      id: newAgentId,
+      name: "New Agent",
+      persona: "",
+      description: "",
+    };
+
+    dispatch({ type: "ADD_AGENT", payload: newAgent });
+    dispatch({
+      type: "UPDATE_SPACE",
+      id: space.id,
+      changes: { agentIds: [...(space.agentIds || []), newAgentId] },
+    });
+    setIsAddingAgent(false);
+  };
+
+  const handleLinkExistingAgent = () => {
+    if (!selectedAgentId) return;
+
+    // Check if already in space just in case
+    if (space.agentIds?.includes(selectedAgentId)) {
+      setIsAddingAgent(false);
+      setSelectedAgentId("");
+      return;
+    }
+
     dispatch({
       type: "UPDATE_SPACE",
       id: space.id,
       changes: {
-        agents: [
-          ...space.agents,
-          {
-            id: crypto.randomUUID(),
-            name: "New Agent",
-            persona: "",
-            description: "",
-          },
-        ],
+        agentIds: [...(space.agentIds || []), selectedAgentId],
       },
     });
+    setIsAddingAgent(false);
+    setSelectedAgentId("");
   };
 
   const deleteSpace = () => {
@@ -103,14 +134,12 @@ export default function SpacePage() {
   };
 
   const updateAgentPersona = (agentId: string, persona: string) => {
-    const updatedAgents = space.agents.map((agent) =>
-      agent.id === agentId ? { ...agent, persona } : agent
-    );
+    const agent = state.agents.find((a) => a.id === agentId);
+    if (!agent) return;
 
     dispatch({
-      type: "UPDATE_SPACE",
-      id: space.id,
-      changes: { agents: updatedAgents },
+      type: "UPDATE_AGENT",
+      payload: { ...agent, persona },
     });
   };
 
@@ -160,10 +189,10 @@ export default function SpacePage() {
         <div className="space-y-4">
           <div className="p-4 border rounded">
             <h2 className="font-semibold text-xl">
-              Agents ({space.agents.length})
+              Agents ({spaceAgents.length})
             </h2>
             <ul>
-              {space.agents.map((agent) => (
+              {spaceAgents.map((agent) => (
                 <li key={agent.id} className="py-1">
                   {agent.name}
                   <input
@@ -204,12 +233,51 @@ export default function SpacePage() {
           >
             Add Conversation
           </button>
-          <button
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-            onClick={addAgent}
-          >
-            Add Agent
-          </button>
+          {isAddingAgent ? (
+            <div className="flex items-center gap-2 border p-2 rounded bg-gray-50">
+              <select
+                className="border rounded px-2 py-1"
+                value={selectedAgentId}
+                onChange={(e) => setSelectedAgentId(e.target.value)}
+              >
+                <option value="">-- Select Agent --</option>
+                {state.agents
+                  .filter((a) => !(space.agentIds || []).includes(a.id))
+                  .map((agent) => (
+                    <option key={agent.id} value={agent.id}>
+                      {agent.name}
+                    </option>
+                  ))}
+              </select>
+              <button
+                disabled={!selectedAgentId}
+                onClick={handleLinkExistingAgent}
+                className="bg-green-600 text-white px-3 py-1 rounded disabled:opacity-50"
+              >
+                Add
+              </button>
+              <span className="text-gray-400">|</span>
+              <button
+                onClick={handleCreateAndAddAgent}
+                className="text-blue-600 text-sm underline"
+              >
+                Create New
+              </button>
+              <button
+                onClick={() => setIsAddingAgent(false)}
+                className="text-gray-500 text-sm ml-2"
+              >
+                Cancel
+              </button>
+            </div>
+          ) : (
+            <button
+              className="px-4 py-2 bg-blue-500 text-white rounded"
+              onClick={() => setIsAddingAgent(true)}
+            >
+              Add Agent
+            </button>
+          )}
 
           <button className="text-red-500 underline" onClick={deleteSpace}>
             Delete

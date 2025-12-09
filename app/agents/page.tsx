@@ -67,11 +67,11 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="p-8">
+    <div className="p-8 max-w-3xl mx-auto">
       {/* Banner */}
       {state.ui.bannerMessage && (
         <div className="mb-4 border border-green-500 bg-green-50 text-green-800 px-4 py-3 rounded flex justify-between items-start">
-          <span>{state.ui.bannerMessage}</span>
+          <span>{state.ui.bannerMessage.message}</span>
           <button
             onClick={() =>
               dispatch({ type: "SET_BANNER", payload: { message: null } })

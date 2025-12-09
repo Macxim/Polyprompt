@@ -21,7 +21,7 @@ export type Conversation = {
 export type Space = {
   id: string;
   name: string;
-  agents: Agent[];
+  agentIds: string[];
   conversations: Conversation[];
 };
 

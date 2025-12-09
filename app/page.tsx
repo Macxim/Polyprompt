@@ -31,7 +31,7 @@ export default function Home() {
       payload: {
         id: crypto.randomUUID(),
         name,
-        agents: [],
+        agentIds: [],
         conversations: [],
       },
     });
@@ -131,7 +131,7 @@ export default function Home() {
               <div className="p-4 border rounded shadow hover:shadow-md transition cursor-pointer">
                 <h2 className="font-bold text-lg">{space.name}</h2>
                 <p className="text-sm text-gray-600">
-                  Agents: {space.agents.length}
+                  Agents: {(space.agentIds || []).length}
                 </p>
                 <p className="text-sm text-gray-600">
                   Conversations: {space.conversations.length}
