@@ -9,7 +9,7 @@ export const runAgent = async (
     const systemPrompt = persona || "You are a helpful assistant.";
 
     const response = await groqClient.chat.completions.create({
-      model: "openai/gpt-oss-120b", // check your Groq console for available models
+      model: "llama-3.3-70b-versatile",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
@@ -17,7 +17,6 @@ export const runAgent = async (
       temperature: 0.7,
     });
 
-    // Groq returns a similar structure as OpenAI
     return response.choices[0].message?.content ?? "";
   } catch (err) {
     console.error("Agent route error:", err);

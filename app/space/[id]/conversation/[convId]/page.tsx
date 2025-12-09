@@ -50,25 +50,50 @@ export default function ConversationPage() {
     });
 
     // Dispatch automatic agent replies
+    setNewMessage("");
+
+    // Dispatch automatic agent replies
     const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
 
-    spaceAgents.forEach((agent) => {
-      const agentMessage: Message = {
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-        role: "agent",
-        content: agent.persona || `Hello, I'm ${agent.name}!`,
-      };
-      dispatch({
-        type: "ADD_MESSAGE",
-        payload: {
-          spaceId,
-          conversationId: convId,
-          message: agentMessage,
-        },
-      });
-    });
+    spaceAgents.forEach(async (agent) => {
+      // 1. Create a placeholder message for loading state (optional, or just wait)
+      // For now, let's just wait and add the message when ready.
+      // Or better: Add a "typing..." indicator?
+      // User didn't ask for typing, just "real agent".
 
-    setNewMessage("");
+      try {
+        const res = await fetch("/api/agent", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            persona: agent.persona,
+            content: newMessage // Context: User's last message. Ideally full history, but start simple.
+          })
+        });
+
+        if (!res.ok) throw new Error("Agent failed to reply");
+
+        const data = await res.json();
+
+        const agentMessage: Message = {
+          id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+          role: "agent",
+          content: data.content || "I couldn't think of anything to say.",
+        };
+
+        dispatch({
+          type: "ADD_MESSAGE",
+          payload: {
+            spaceId,
+            conversationId: convId,
+            message: agentMessage,
+          },
+        });
+      } catch (error) {
+        console.error("Agent fetch error", error);
+        // Optionally dispatch an error message
+      }
+    });
   };
 
   return (
