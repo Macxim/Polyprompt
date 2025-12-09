@@ -3,7 +3,7 @@ import { runAgent } from "../../../lib/agent";
 
 export async function POST(req: NextRequest) {
   try {
-    const { persona, content } = await req.json();
+    const { name, persona, description, content } = await req.json();
 
     if (!content) {
       return NextResponse.json(
@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     }
 
     // Call Groq agent
-    const agentResponse = await runAgent(persona, content);
+    const agentResponse = await runAgent(name, persona, description, content);
 
     return NextResponse.json({ content: agentResponse });
   } catch (err) {

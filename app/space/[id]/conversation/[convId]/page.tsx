@@ -66,7 +66,9 @@ export default function ConversationPage() {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
+            name: agent.name,
             persona: agent.persona,
+            description: agent.description,
             content: newMessage // Context: User's last message. Ideally full history, but start simple.
           })
         });

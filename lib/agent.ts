@@ -2,14 +2,19 @@
 import { groqClient } from "./groq";
 
 export const runAgent = async (
+  name: string | undefined,
   persona: string | undefined,
+  description: string | undefined,
   userMessage: string
 ) => {
   try {
-    const systemPrompt = persona || "You are a helpful assistant.";
+    const systemPrompt =
+      (name ? `You are ${name}. ` : "") +
+      (persona || "You are a helpful assistant.") +
+      (description ? `\n\nAbout you: ${description}` : "");
 
     const response = await groqClient.chat.completions.create({
-      model: "llama-3.3-70b-versatile",
+      model: "llama-3.1-8b-instant",
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userMessage },
