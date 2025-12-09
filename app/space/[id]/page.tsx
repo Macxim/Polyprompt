@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { useState } from "react";
+import AgentModal from "@/app/components/AgentModal";
 
 export default function SpacePage() {
   const { state, dispatch } = useApp();
@@ -69,7 +70,7 @@ export default function SpacePage() {
         conversations: [
           ...space.conversations,
           {
-            id: crypto.randomUUID(),
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
             title: "New Conversation",
             messages: [],
           },
@@ -83,22 +84,18 @@ export default function SpacePage() {
    * We will keep this function for "Create new" via the UI,
    * BUT we also need a function to link an *existing* agent.
    */
+  /*
+   * Updated Logic: Open the global Agent Modal.
+   * We pass a callback to the modal (handled via component prop) or handle it in the modal itself?
+   * Since the modal is global, we can't easily pass a callback unless we structure it differently.
+   * However, I added `onAgentCreated` prop to `AgentModal`.
+   * So we will render `AgentModal` in this page and pass the callback.
+   */
   const handleCreateAndAddAgent = () => {
-    const newAgentId = crypto.randomUUID();
-    const newAgent = {
-      id: newAgentId,
-      name: "New Agent",
-      persona: "",
-      description: "",
-    };
-
-    dispatch({ type: "ADD_AGENT", payload: newAgent });
-    dispatch({
-      type: "UPDATE_SPACE",
-      id: space.id,
-      changes: { agentIds: [...(space.agentIds || []), newAgentId] },
-    });
-    setIsAddingAgent(false);
+    dispatch({ type: "CLEAR_ACTIVE_AGENT" });
+    dispatch({ type: "OPEN_AGENT_MODAL" });
+    // The actual agent creation happens in the modal.
+    // We'll listen for the new agent ID via the callback passed to <AgentModal />
   };
 
   const handleLinkExistingAgent = () => {
@@ -140,6 +137,20 @@ export default function SpacePage() {
     dispatch({
       type: "UPDATE_AGENT",
       payload: { ...agent, persona },
+    });
+  };
+
+  /* ------------------------------------------------------ */
+
+  const removeAgentFromSpace = (agentId: string) => {
+    if (!space.agentIds) return;
+
+    dispatch({
+      type: "UPDATE_SPACE",
+      id: space.id,
+      changes: {
+        agentIds: space.agentIds.filter((id) => id !== agentId),
+      },
     });
   };
 
@@ -193,15 +204,22 @@ export default function SpacePage() {
             </h2>
             <ul>
               {spaceAgents.map((agent) => (
-                <li key={agent.id} className="py-1">
-                  {agent.name}
+                <li key={agent.id} className="py-2 flex items-center gap-2">
+                  <span className="font-medium">{agent.name}</span>
                   <input
-                    className="ml-2 border px-2 py-1"
+                    className="border px-2 py-1 rounded text-sm w-full max-w-xs"
+                    placeholder="Persona/Role overrides..."
                     value={agent.persona}
                     onChange={(e) =>
                       updateAgentPersona(agent.id, e.target.value)
                     }
                   />
+                  <button
+                    className="text-red-500 text-sm hover:underline ml-auto"
+                    onClick={() => removeAgentFromSpace(agent.id)}
+                  >
+                    Remove
+                  </button>
                 </li>
               ))}
             </ul>
@@ -290,6 +308,20 @@ export default function SpacePage() {
         >
           Back to spaces
         </button>
+
+        <AgentModal
+          onAgentCreated={(newAgentId) => {
+            // Automatically link the new agent to this space
+            dispatch({
+              type: "UPDATE_SPACE",
+              id: space.id,
+              changes: {
+                agentIds: [...(space.agentIds || []), newAgentId],
+              },
+            });
+            setIsAddingAgent(false);
+          }}
+        />
       </div>
     </>
   );

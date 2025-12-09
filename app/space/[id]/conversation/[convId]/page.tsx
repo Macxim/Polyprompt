@@ -34,7 +34,7 @@ export default function ConversationPage() {
     if (!newMessage.trim()) return;
 
     const userMessage: Message = {
-      id: crypto.randomUUID(),
+      id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       role: "user",
       content: newMessage,
     };
@@ -50,9 +50,11 @@ export default function ConversationPage() {
     });
 
     // Dispatch automatic agent replies
-    space.agents.forEach((agent) => {
+    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+
+    spaceAgents.forEach((agent) => {
       const agentMessage: Message = {
-        id: crypto.randomUUID(),
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
         role: "agent",
         content: agent.persona || `Hello, I'm ${agent.name}!`,
       };

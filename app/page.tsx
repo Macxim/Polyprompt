@@ -4,6 +4,9 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { useApp } from "./state/AppProvider";
 
+// Basic ID generator safe for all environments
+const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+
 export default function Home() {
   const { dispatch, state } = useApp();
 
@@ -29,7 +32,7 @@ export default function Home() {
     dispatch({
       type: "ADD_SPACE",
       payload: {
-        id: crypto.randomUUID(),
+        id: generateId(),
         name,
         agentIds: [],
         conversations: [],

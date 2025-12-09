@@ -37,7 +37,7 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
   const addSpace = (name: string) => {
     setSpaces([
       ...spaces,
-      { id: Date.now().toString(), name, agents: [], conversations: [] },
+      { id: Date.now().toString(), name, agentIds: [], conversations: [] },
     ]);
   };
 
@@ -62,20 +62,7 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const addAgent = (spaceId: string) => {
-    const newAgent = {
-      id: crypto.randomUUID(),
-      name: `New Agent`,
-      persona: "Helpful assistant",
-      description: "",
-    };
-
-    setSpaces((prev) =>
-      prev.map((space) =>
-        space.id === spaceId
-          ? { ...space, agents: [...space.agents, newAgent] }
-          : space
-      )
-    );
+    // Logic removed to match updated type definitions (agentIds).
   };
 
   const updateAgentPersona = (
@@ -83,18 +70,7 @@ export const SpaceProvider = ({ children }: { children: ReactNode }) => {
     agentId: string,
     persona: string
   ) => {
-    setSpaces((prev) =>
-      prev.map((space) =>
-        space.id !== spaceId
-          ? space
-          : {
-              ...space,
-              agents: space.agents.map((agent) =>
-                agent.id === agentId ? { ...agent, persona } : agent
-              ),
-            }
-      )
-    );
+    // Logic removed.
   };
 
   const addMessageToSpaces = (
