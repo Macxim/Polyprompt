@@ -66,18 +66,23 @@ export default function Home() {
         </div>
       )}
 
-      <div className="p-8 max-w-3xl mx-auto">
-        <h1 className="text-3xl font-bold mb-4">Polyprompt</h1>
+      <div className="p-8 max-w-4xl mx-auto">
+        <header className="mb-12 text-center">
+          <h1 className="text-5xl font-extrabold mb-4 text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-indigo-600 tracking-tight pb-2">
+            Polyprompt
+          </h1>
+          <p className="text-slate-500 text-lg">Orchestrate your AI workforce.</p>
+        </header>
 
-        <div className="mb-6 px-6 py-3 border-l-4 border-blue-500 bg-gray-100/80">
-          <h2 className="font-semibold text-lg mb-1">What is a Space?</h2>
-          <p className="text-gray-800">
+        <div className="mb-10 p-6 bg-white rounded-xl shadow-sm border border-slate-200">
+          <h2 className="font-bold text-xl mb-2 text-slate-800">What is a Space?</h2>
+          <p className="text-slate-600 leading-relaxed">
             A <strong>Space</strong> is a dedicated workspace where you can
             organize AI agents, conversations, and projects around a specific
             topic. Think of it as a “room” where all discussions and tools
             related to that topic live together.
           </p>
-          <p className="text-gray-800 mt-2">
+          <p className="text-slate-600 mt-2 leading-relaxed">
             <strong>Example:</strong> You might create a space called{" "}
             <em>Marketing Campaign</em>. Inside this space, you can have agents
             that help with copywriting or data analysis, and multiple
@@ -86,11 +91,11 @@ export default function Home() {
         </div>
 
         {/* Add new space */}
-        <div className="mb-6 flex flex-col gap-1">
-          <div className="flex gap-2">
+        <div className="mb-10">
+          <div className="flex gap-3">
             <input
               ref={nameInputRef}
-              className={`border px-2 py-1 flex-1 rounded ${
+              className={`flex-1 px-4 py-3 rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm ${
                 nameError ? "border-red-500" : ""
               }`}
               value={name}
@@ -108,37 +113,37 @@ export default function Home() {
                   handleAddSpace();
                 }
               }}
-              placeholder="New space name"
+              placeholder="Name your new space..."
             />
 
             <button
-              className="bg-blue-500 text-white px-4 py-1 rounded"
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg shadow-md transition-all active:scale-95"
               onClick={handleAddSpace}
             >
-              Add Space
+              Create Space
             </button>
           </div>
 
           {/* Character counter */}
-          <div className="text-right text-xs text-gray-500">
-            {name.length}/{MAX_LENGTH}
+          <div className="flex justify-between mt-2 px-1">
+             {nameError ? <p className="text-red-500 text-sm font-medium">{nameError}</p> : <div></div>}
+             <div className="text-xs text-slate-400">
+              {name.length}/{MAX_LENGTH}
+            </div>
           </div>
-
-          {nameError && <p className="text-red-600 text-sm">{nameError}</p>}
         </div>
 
         {/* List spaces */}
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {state.spaces.map((space) => (
             <Link key={space.id} href={`/space/${space.id}`}>
-              <div className="p-4 border rounded shadow hover:shadow-md transition cursor-pointer">
-                <h2 className="font-bold text-lg">{space.name}</h2>
-                <p className="text-sm text-gray-600">
-                  Agents: {(space.agentIds || []).length}
-                </p>
-                <p className="text-sm text-gray-600">
-                  Conversations: {space.conversations.length}
-                </p>
+              <div className="group bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer h-full relative overflow-hidden">
+                <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+                <h2 className="font-bold text-xl text-slate-800 mb-2">{space.name}</h2>
+                <div className="flex gap-4 text-sm text-slate-500">
+                  <span>🤖 {(space.agentIds || []).length} Agents</span>
+                  <span>💬 {space.conversations.length} Chats</span>
+                </div>
               </div>
             </Link>
           ))}
