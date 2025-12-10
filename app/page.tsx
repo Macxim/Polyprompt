@@ -127,8 +127,14 @@ export default function Home() {
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>
                 <h2 className="font-bold text-xl text-slate-800 mb-2">{space.name}</h2>
                 <div className="flex gap-4 text-sm text-slate-500">
-                  <span>🤖 {(space.agentIds || []).length} Agents</span>
-                  <span>💬 {space.conversations.length} Chats</span>
+                  <span>🤖 {(() => {
+                    const count = state.agents.filter(a => (space.agentIds || []).includes(a.id)).length;
+                    return count === 0 ? 'No agents' : count === 1 ? '1 Agent' : `${count} Agents`;
+                  })()}</span>
+                  <span>💬 {(() => {
+                    const count = space.conversations.length;
+                    return count === 0 ? 'No chats' : count === 1 ? '1 Chat' : `${count} Chats`;
+                  })()}</span>
                 </div>
               </div>
             </Link>
