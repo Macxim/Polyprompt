@@ -6,6 +6,10 @@ export const reducer = (state: AppState, action: Action): AppState => {
     case "HYDRATE_APP":
       return {
         ...action.payload,
+        ui: {
+          ...action.payload.ui,
+          isConversationModalOpen: (action.payload.ui as any).isConversationModalOpen ?? false,
+        },
         _hydrated: true,
       };
 
@@ -127,6 +131,18 @@ export const reducer = (state: AppState, action: Action): AppState => {
       return {
         ...state,
         ui: { ...state.ui, isSpaceModalOpen: false },
+      };
+
+    case "OPEN_CONVERSATION_MODAL":
+      return {
+        ...state,
+        ui: { ...state.ui, isConversationModalOpen: true },
+      };
+
+    case "CLOSE_CONVERSATION_MODAL":
+      return {
+        ...state,
+        ui: { ...state.ui, isConversationModalOpen: false },
       };
 
     case "SET_BANNER":

@@ -3,6 +3,7 @@
 import { useState } from "react";
 import AgentCard from "./components/AgentCard";
 import AgentModal from "../components/AgentModal";
+import Banner from "../components/Banner";
 import { useApp } from "../state/AppProvider";
 
 export default function AgentsPage() {
@@ -68,23 +69,11 @@ export default function AgentsPage() {
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      {/* Banner */}
-      {state.ui.bannerMessage && (
-        <div className="mb-4 border border-green-500 bg-green-50 text-green-800 px-4 py-3 rounded flex justify-between items-start">
-          <span>{state.ui.bannerMessage.message}</span>
-          <button
-            onClick={() =>
-              dispatch({ type: "SET_BANNER", payload: { message: null } })
-            }
-            className="ml-4 text-green-700 hover:text-green-900 font-semibold"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+    <>
+      <Banner maxWidth="3xl" />
 
-      {/* Header */}
+      <div className="p-8 max-w-3xl mx-auto">
+        {/* Header */}
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold">Agents</h1>
         <button
@@ -102,7 +91,8 @@ export default function AgentsPage() {
         ))}
       </div>
 
-      <AgentModal />
-    </div>
+        <AgentModal />
+      </div>
+    </>
   );
 }

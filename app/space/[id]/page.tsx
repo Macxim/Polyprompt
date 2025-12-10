@@ -5,6 +5,8 @@ import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { useState } from "react";
 import AgentModal from "@/app/components/AgentModal";
+import Banner from "@/app/components/Banner";
+import ConversationModal from "@/app/components/ConversationModal";
 
 export default function SpacePage() {
   const { state, dispatch } = useApp();
@@ -63,20 +65,8 @@ export default function SpacePage() {
       return;
     }
 
-    dispatch({
-      type: "UPDATE_SPACE",
-      id: space.id,
-      changes: {
-        conversations: [
-          ...space.conversations,
-          {
-            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-            title: "New Conversation",
-            messages: [],
-          },
-        ],
-      },
-    });
+    // Open the modal to let user name the conversation
+    dispatch({ type: "OPEN_CONVERSATION_MODAL" });
   };
 
   /*
@@ -158,22 +148,7 @@ export default function SpacePage() {
 
   return (
     <>
-      {state.ui.bannerMessage?.message && (
-        <div
-          role="status"
-          className="mb-4 border border-green-200 bg-green-50 text-green-800 px-4 py-3 rounded-lg flex justify-between items-start shadow-sm mx-4 mt-4 max-w-6xl lg:mx-auto"
-        >
-          <span>{state.ui.bannerMessage.message}</span>
-          <button
-            onClick={() =>
-              dispatch({ type: "SET_BANNER", payload: { message: null } })
-            }
-            className="ml-4 text-green-700 hover:text-green-900 font-semibold"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+      <Banner maxWidth="6xl" />
 
       <div className="p-8 max-w-6xl mx-auto">
         {/* Header Section */}
@@ -388,6 +363,8 @@ export default function SpacePage() {
             setIsAddingAgent(false);
           }}
         />
+
+        <ConversationModal spaceId={spaceId} />
       </div>
     </>
   );

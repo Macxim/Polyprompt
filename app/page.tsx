@@ -3,6 +3,7 @@
 import { useState, useRef } from "react";
 import Link from "next/link";
 import { useApp } from "./state/AppProvider";
+import Banner from "./components/Banner";
 
 // Basic ID generator safe for all environments
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -49,22 +50,7 @@ export default function Home() {
 
   return (
     <>
-      {state.ui.bannerMessage?.message && (
-        <div
-          role="status"
-          className="mb-4 border border-green-500 bg-green-50 text-green-800 px-4 py-3 rounded flex justify-between items-start"
-        >
-          <span>{state.ui.bannerMessage.message}</span>
-          <button
-            onClick={() =>
-              dispatch({ type: "SET_BANNER", payload: { message: null } })
-            }
-            className="ml-4 text-green-700 hover:text-green-900 font-semibold"
-          >
-            Dismiss
-          </button>
-        </div>
-      )}
+      <Banner maxWidth="4xl" />
 
       <div className="p-8 max-w-4xl mx-auto">
         <header className="mb-12 text-center">

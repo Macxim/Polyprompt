@@ -19,5 +19,7 @@ export type Action =
   | { type: "CLOSE_AGENT_MODAL" }
   | { type: "OPEN_SPACE_MODAL" }
   | { type: "CLOSE_SPACE_MODAL" }
+  | { type: "OPEN_CONVERSATION_MODAL" }
+  | { type: "CLOSE_CONVERSATION_MODAL" }
   | { type: "SET_BANNER"; payload: { message: string | null } }
   | { type: "HYDRATE_APP"; payload: AppState };
