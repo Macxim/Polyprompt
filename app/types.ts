@@ -16,6 +16,11 @@ export type Message = {
   agentName?: string;
   timestamp?: number;
   isStreaming?: boolean;
+  tokens?: {
+    prompt: number;
+    completion: number;
+    total: number;
+  };
 };
 
 export type Conversation = {

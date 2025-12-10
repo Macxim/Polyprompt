@@ -17,7 +17,7 @@ export type Action =
     }
   | {
       type: "UPDATE_MESSAGE";
-      payload: { spaceId: string; conversationId: string; messageId: string; content: string };
+      payload: { spaceId: string; conversationId: string; messageId: string; content: string; tokens?: { prompt: number; completion: number; total: number } };
     }
   | {
       type: "RENAME_CONVERSATION";

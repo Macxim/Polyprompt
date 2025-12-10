@@ -47,6 +47,45 @@ export default function ConversationPage() {
 
   if (!space || !conversation) return <p className="p-8 text-center text-slate-500">Conversation not found.</p>;
 
+  // Model pricing per 1M tokens
+  const MODEL_PRICING = {
+    'gpt-4o': { input: 2.50, output: 10.00 },
+    'gpt-4o-mini': { input: 0.15, output: 0.60 },
+    'gpt-3.5-turbo': { input: 0.50, output: 1.50 },
+  } as const;
+
+  // Calculate total tokens and cost for conversation
+  const calculateTotals = () => {
+    let totalTokens = 0;
+    let totalCost = 0;
+
+    conversation.messages.forEach(msg => {
+      if (msg.tokens) {
+        totalTokens += msg.tokens.total;
+
+        // Get model from agent or default to gpt-4o-mini
+        const agent = state.agents.find(a => a.id === msg.agentId);
+        const model = agent?.model || 'gpt-4o-mini';
+        const pricing = MODEL_PRICING[model] || MODEL_PRICING['gpt-4o-mini'];
+
+        const inputCost = (msg.tokens.prompt / 1_000_000) * pricing.input;
+        const outputCost = (msg.tokens.completion / 1_000_000) * pricing.output;
+        totalCost += inputCost + outputCost;
+      }
+    });
+
+    return { totalTokens, totalCost };
+  };
+
+  const { totalTokens, totalCost } = calculateTotals();
+
+  // Format token count (e.g., 1.2K, 15K, 1.5M)
+  const formatTokens = (count: number) => {
+    if (count >= 1_000_000) return `${(count / 1_000_000).toFixed(1)}M`;
+    if (count >= 1_000) return `${(count / 1_000).toFixed(1)}K`;
+    return count.toString();
+  };
+
   // Handle sending a new message
   const handleSend = async () => {
     if (!newMessage.trim()) return;
@@ -146,13 +185,27 @@ export default function ConversationPage() {
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
         let streamedContent = "";
+        let tokenUsage = null;
 
         while (true) {
-          const { done, value } = await reader.read();
+          const { done, value} = await reader.read();
           if (done) break;
 
           const chunk = decoder.decode(value, { stream: true });
-          streamedContent += chunk;
+
+          // Check for token usage marker
+          if (chunk.includes('__TOKENS__')) {
+            const parts = chunk.split('__TOKENS__');
+            streamedContent += parts[0];
+
+            try {
+              tokenUsage = JSON.parse(parts[1]);
+            } catch (e) {
+              console.error('Failed to parse token usage:', e);
+            }
+          } else {
+            streamedContent += chunk;
+          }
 
           // Update the message content
           dispatch({
@@ -166,7 +219,7 @@ export default function ConversationPage() {
           });
         }
 
-        // Mark streaming as complete
+        // Mark streaming as complete with token data
         dispatch({
           type: "UPDATE_MESSAGE",
           payload: {
@@ -174,6 +227,7 @@ export default function ConversationPage() {
             conversationId: convId,
             messageId: agentMsgId,
             content: streamedContent,
+            tokens: tokenUsage,
           },
         });
 
@@ -301,8 +355,18 @@ export default function ConversationPage() {
                }}
                className="text-lg font-bold text-slate-800 leading-tight bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none transition-colors w-full sm:w-auto"
              />
-             <p className="text-xs text-slate-500 font-medium">{spaceAgentsCount(state, space)} Agents active</p>
-          </div>
+              <div className="flex items-center gap-3 text-xs">
+                <p className="text-slate-500 font-medium">{spaceAgentsCount(state, space)} Agents active</p>
+                {totalTokens > 0 && (
+                  <>
+                    <span className="text-slate-300">•</span>
+                    <p className="text-slate-500 font-medium">
+                      {formatTokens(totalTokens)} tokens • ${totalCost.toFixed(4)}
+                    </p>
+                  </>
+                )}
+              </div>
+           </div>
         </div>
 
         <div className="flex items-center gap-2">

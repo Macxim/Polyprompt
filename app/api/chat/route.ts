@@ -34,12 +34,13 @@ export async function POST(req: Request) {
       },
     ];
 
-    // Call OpenAI API with streaming
+    // Call OpenAI API with streaming and usage tracking
     const response = await openai.chat.completions.create({
       model: agent.model || "gpt-4o-mini",
       messages: openaiMessages,
       temperature: agent.temperature ?? 0.7,
       stream: true,
+      stream_options: { include_usage: true }, // Request usage data in stream
     });
 
     // Create a readable stream for the response
@@ -47,12 +48,29 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
+          let tokenUsage = null;
+
           for await (const chunk of response) {
             const content = chunk.choices[0]?.delta?.content || "";
             if (content) {
               controller.enqueue(encoder.encode(content));
             }
+
+            // Capture token usage from the final chunk
+            if (chunk.usage) {
+              tokenUsage = {
+                prompt: chunk.usage.prompt_tokens,
+                completion: chunk.usage.completion_tokens,
+                total: chunk.usage.total_tokens,
+              };
+            }
           }
+
+          // Send token usage as a special marker at the end
+          if (tokenUsage) {
+            controller.enqueue(encoder.encode(`\n__TOKENS__${JSON.stringify(tokenUsage)}`));
+          }
+
           controller.close();
         } catch (error) {
           controller.error(error);
