@@ -318,34 +318,57 @@ export default function SpacePage() {
                    <p className="text-slate-400 font-medium">No conversations yet.</p>
                    <p className="text-sm text-slate-400 mt-1">Start a new chat to brainstorm with your agents.</p>
                  </div>
-               ) : (
-                 space.conversations.map((conv) => (
-                    <Link
-                      key={conv.id}
-                      href={`/space/${space.id}/conversation/${conv.id}`}
-                    >
-                      <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer h-full flex flex-col justify-between group">
-                         <div>
-                           <div className="flex items-start justify-between mb-2">
-                             <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
+                ) : (
+                  space.conversations.map((conv) => (
+                    <div key={conv.id} className="relative">
+                      <Link
+                        href={`/space/${space.id}/conversation/${conv.id}`}
+                      >
+                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer h-full flex flex-col justify-between group">
+                          <div>
+                            <div className="flex items-start justify-between mb-2">
+                              <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
                                   <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
                                 </svg>
-                             </div>
-                             <span className="text-xs text-slate-400 font-mono">{conv.messages.length} msgs</span>
-                           </div>
-                           <h3 className="font-bold text-lg text-slate-800 group-hover:text-indigo-700 transition-colors mb-2 line-clamp-1">{conv.title}</h3>
-                           <p className="text-sm text-slate-500 line-clamp-2">
-                             {conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : "No messages yet."}
-                           </p>
-                         </div>
-                         <div className="mt-4 flex items-center text-xs font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">
-                           Open chat →
-                         </div>
-                      </div>
-                    </Link>
-                 ))
-               )}
+                              </div>
+                              <span className="text-xs text-slate-400 font-mono">{conv.messages.length} msgs</span>
+                            </div>
+                            <h3 className="font-bold text-lg text-slate-800 group-hover:text-indigo-700 transition-colors mb-2 line-clamp-1">{conv.title}</h3>
+                            <p className="text-sm text-slate-500 line-clamp-2">
+                              {conv.messages.length > 0 ? conv.messages[conv.messages.length - 1].content : "No messages yet."}
+                            </p>
+                          </div>
+                          <div className="mt-4 flex items-center text-xs font-medium text-slate-500 group-hover:text-indigo-600 transition-colors">
+                            Open chat →
+                          </div>
+                        </div>
+                      </Link>
+                      <button
+                        onClick={(e) => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          if (confirm(`Delete conversation "${conv.title}"?`)) {
+                            dispatch({
+                              type: "DELETE_CONVERSATION",
+                              payload: { spaceId: space.id, conversationId: conv.id },
+                            });
+                            dispatch({
+                              type: "SET_BANNER",
+                              payload: { message: "Conversation deleted." },
+                            });
+                          }
+                        }}
+                        className="absolute top-3 right-3 p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 z-10"
+                        title="Delete conversation"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+                        </svg>
+                      </button>
+                    </div>
+                  ))
+                )}
              </div>
           </div>
         </div>

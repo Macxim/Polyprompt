@@ -104,6 +104,21 @@ export const reducer = (state: AppState, action: Action): AppState => {
       };
     }
 
+    case "DELETE_CONVERSATION": {
+      const { spaceId, conversationId } = action.payload;
+
+      return {
+        ...state,
+        spaces: state.spaces.map((space) => {
+          if (space.id !== spaceId) return space;
+          return {
+            ...space,
+            conversations: space.conversations.filter((conv) => conv.id !== conversationId),
+          };
+        }),
+      };
+    }
+
     //
     // ────────────────────────────────
     //  UI / MODALS / BANNERS

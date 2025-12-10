@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
 import ReactMarkdown from "react-markdown";
@@ -9,6 +9,7 @@ import ReactMarkdown from "react-markdown";
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
   const params = useParams();
+  const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
 
   // Validate params
@@ -110,7 +111,40 @@ export default function ConversationPage() {
 
   return (
     <div className="p-8 max-w-3xl mx-auto">
-      <h1 className="text-2xl font-bold mb-4">{conversation.title}</h1>
+      {/* Header with navigation and delete */}
+      <div className="mb-6">
+        <button
+          onClick={() => router.push(`/space/${spaceId}`)}
+          className="text-slate-500 hover:text-indigo-600 text-sm font-medium mb-4 flex items-center gap-1 transition-colors"
+        >
+          ← Back to Space
+        </button>
+
+        <div className="flex items-center justify-between">
+          <h1 className="text-2xl font-bold text-slate-800">{conversation.title}</h1>
+          <button
+            onClick={() => {
+              if (confirm(`Delete conversation "${conversation.title}"?`)) {
+                dispatch({
+                  type: "DELETE_CONVERSATION",
+                  payload: { spaceId, conversationId: convId },
+                });
+                dispatch({
+                  type: "SET_BANNER",
+                  payload: { message: "Conversation deleted." },
+                });
+                router.push(`/space/${spaceId}`);
+              }
+            }}
+            className="px-4 py-2 bg-white border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-2"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+            </svg>
+            Delete
+          </button>
+        </div>
+      </div>
 
       <div className="space-y-4 mb-4">
         {conversation.messages.map((msg) => (
@@ -151,8 +185,11 @@ export default function ConversationPage() {
         />
         <button
           onClick={handleSend}
-          className="px-4 py-2 bg-blue-500 text-white rounded"
+          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
         >
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+            <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+          </svg>
           Send
         </button>
       </div>

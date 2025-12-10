@@ -15,6 +15,7 @@ export type Action =
       type: "ADD_MESSAGE";
       payload: { spaceId: string; conversationId: string; message: Message };
     }
+  | { type: "DELETE_CONVERSATION"; payload: { spaceId: string; conversationId: string } }
   | { type: "OPEN_AGENT_MODAL" }
   | { type: "CLOSE_AGENT_MODAL" }
   | { type: "OPEN_SPACE_MODAL" }
