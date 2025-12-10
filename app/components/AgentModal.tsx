@@ -14,6 +14,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
   const [name, setName] = useState("");
   const [persona, setPersona] = useState("");
   const [description, setDescription] = useState("");
+  const [model, setModel] = useState<"gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo">("gpt-4o-mini");
   const [nameError, setNameError] = useState("");
   const [personaError, setPersonaError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
@@ -29,10 +30,12 @@ export default function AgentModal({ onAgentCreated }: Props) {
         setName(activeAgent.name);
         setPersona(activeAgent.persona);
         setDescription(activeAgent.description || "");
+        setModel(activeAgent.model || "gpt-4o-mini");
       } else {
         setName("");
         setPersona("");
         setDescription("");
+        setModel("gpt-4o-mini");
       }
       setNameError("");
       setPersonaError("");
@@ -62,14 +65,14 @@ export default function AgentModal({ onAgentCreated }: Props) {
     if (activeAgent) {
       dispatch({
         type: "UPDATE_AGENT",
-        payload: { ...activeAgent, name, persona, description },
+        payload: { ...activeAgent, name, persona, description, model },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent updated." } });
     } else {
       const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       dispatch({
         type: "ADD_AGENT",
-        payload: { id: newId, name, persona, description },
+        payload: { id: newId, name, persona, description, model },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent created." } });
 
@@ -126,6 +129,26 @@ export default function AgentModal({ onAgentCreated }: Props) {
             {personaError && (
               <p className="text-red-600 text-sm mt-1">{personaError}</p>
             )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              AI Model
+            </label>
+            <select
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+              value={model}
+              onChange={(e) => setModel(e.target.value as "gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo")}
+            >
+              <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap) ⚡</option>
+              <option value="gpt-4o">GPT-4o (Most Capable) 🚀</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy) 💰</option>
+            </select>
+            <p className="text-xs text-slate-500 mt-1">
+              {model === "gpt-4o-mini" && "Best balance of speed and quality. ~$0.15 per 1M tokens."}
+              {model === "gpt-4o" && "Most advanced model. ~$2.50 per 1M tokens."}
+              {model === "gpt-3.5-turbo" && "Older model, cheapest option. ~$0.50 per 1M tokens."}
+            </p>
           </div>
 
           <div>
