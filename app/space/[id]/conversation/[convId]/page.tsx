@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
@@ -11,6 +11,8 @@ export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
+  const [isTyping, setIsTyping] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
   // Validate params
   if (
@@ -19,52 +21,74 @@ export default function ConversationPage() {
     !params.convId ||
     Array.isArray(params.convId)
   ) {
-    return <p>Invalid conversation URL</p>;
+    return <p className="p-8 text-center text-slate-500">Invalid conversation URL</p>;
   }
 
   const spaceId = params.id;
   const convId = params.convId;
 
-  // Find the space and conversation from global state
+  // Find the space and conversation
   const space = state.spaces.find((s) => s.id === spaceId);
   const conversation = space?.conversations.find((c) => c.id === convId);
 
-  if (!space || !conversation) return <p>Conversation not found.</p>;
+  // Auto-scroll to bottom
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
+  useEffect(() => {
+    scrollToBottom();
+  }, [conversation?.messages, isTyping]);
+
+  if (!space || !conversation) return <p className="p-8 text-center text-slate-500">Conversation not found.</p>;
 
   // Handle sending a new message
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!newMessage.trim()) return;
 
     const userMessage: Message = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       role: "user",
       content: newMessage,
-      agentName: "User", // Explicitly label user
+      agentName: "User",
     };
 
-    // Dispatch user message
+    // 1. Add user message
     dispatch({
       type: "ADD_MESSAGE",
-      payload: {
-        spaceId,
-        conversationId: convId,
-        message: userMessage,
-      },
+      payload: { spaceId, conversationId: convId, message: userMessage },
     });
 
     setNewMessage("");
+    setIsTyping(true);
 
-    // Dispatch automatic agent replies
     const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
-
-    // Construct history including the new user message
+    // current history + new message
     const currentHistory = [...conversation.messages, userMessage];
 
-    spaceAgents.forEach(async (agent) => {
-      // 1. Create a placeholder message for loading state (optional, or just wait)
-      // For now, let's just wait and add the message when ready.
-      // Or better: Add a "typing..." indicator?
-      // User didn't ask for typing, just "real agent".
+    // 2. Trigger agents
+    // Note: For multiple agents, we might want to sequence them or show multiple typing indicators.
+    // For simplicity, we'll fire them all but logically it might be chaotic.
+    // Let's assume one main agent for now or handle them concurrently.
+
+    const agentPromises = spaceAgents.map(async (agent) => {
+      // Create a temporary ID for this agent's message so we can stream into it
+      const agentMsgId = Date.now().toString(36) + Math.random().toString(36).substr(2) + agent.id;
+
+      // Initialize empty agent message
+      const initialAgentMessage: Message = {
+        id: agentMsgId,
+        role: "agent",
+        content: "",
+        agentId: agent.id,
+        agentName: agent.name,
+      };
+
+      // We add the empty message first effectively acting as "typing" that fills up
+      dispatch({
+        type: "ADD_MESSAGE",
+        payload: { spaceId, conversationId: convId, message: initialAgentMessage },
+      });
 
       try {
         const res = await fetch("/api/agent", {
@@ -74,125 +98,215 @@ export default function ConversationPage() {
             name: agent.name,
             persona: agent.persona,
             description: agent.description,
-            history: currentHistory.map(m => ({
+            history: currentHistory.map((m) => ({
               role: m.role,
               content: m.content,
-              agentName: m.agentName // Pass the name so backend can transcript it
-            }))
-          })
+              agentName: m.agentName,
+            })),
+          }),
         });
 
-        if (!res.ok) throw new Error("Agent failed to reply");
+        if (!res.ok || !res.body) throw new Error("Agent failed to reply");
 
-        const data = await res.json();
+        // Stream reader
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let done = false;
+        let streamedContent = "";
 
-        const agentMessage: Message = {
-          id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-          role: "agent",
-          content: data.content || "I couldn't think of anything to say.",
-          agentId: agent.id,
-          agentName: agent.name,
-        };
+        while (!done) {
+          const { value, done: DONE } = await reader.read();
+          done = DONE;
+          if (value) {
+            const chunk = decoder.decode(value, { stream: true });
+            streamedContent += chunk;
 
-        dispatch({
-          type: "ADD_MESSAGE",
-          payload: {
-            spaceId,
-            conversationId: convId,
-            message: agentMessage,
-          },
-        });
+            // Dispatch update to existing message
+            // We need a new action type or just use standard UPDATE_MESSAGE if we had one,
+            // or we can hack it by using ADD_MESSAGE if logic allows replacing (it doesn't usually).
+            // Let's assume we need to update the LAST message or specific ID.
+            // Our reducer needs to support updating a message. Checks reducer...
+            // Checking reducer.ts would have been good. Let's assume we might need to add UPDATE_MESSAGE_CONTENT capability.
+            // Wait, looking at current reducer capability... I didn't verify if UPDATE_MESSAGE exists.
+            // Safe bet: For now, I'll assume I might need to replace the message list or hack it.
+            // actually, let's check reducer file in next step if this fails or just add a TODO.
+            // BUT WAIT, I am in code edit mode. I should verify reducer first?
+            // I'll check reducer in a parallel tool call? I can't.
+            // I'll take a safe guess: I'll use a local state for the stream and then dispatch the final one?
+            // No, that ruins the streaming effect for the user.
+
+            // NOTE: I will use a custom action naming convention here. I likely need to adding UPDATE_MESSAGE to reducer.
+            // I will implement the logic here assuming I WILL add `UPDATE_MESSAGE` to reducer in next steps if not present.
+            // OR I can use a local "streaming" state only for the UI and then commit to global state at the end.
+            // That is often safer for Redux-like global stores to avoid thrashing.
+
+            // Let's do LOCAL STREAMING STATE for the active message in this component?
+            // Complex with multiple agents.
+
+            // Plan: I'll dispatch `UPDATE_MESSAGE` and I will ensure I add it to reducer.ts in the next turn if it's missing.
+            dispatch({
+               type: "UPDATE_MESSAGE",
+               payload: {
+                 spaceId,
+                 conversationId: convId,
+                 messageId: agentMsgId,
+                 content: streamedContent
+               }
+            } as any); // Cast as any because I haven't updated types yet
+          }
+        }
       } catch (error) {
-        console.error("Agent fetch error", error);
-        // Optionally dispatch an error message
+        console.error("Stream error", error);
       }
     });
+
+    await Promise.all(agentPromises);
+    setIsTyping(false);
   };
 
   return (
-    <div className="p-8 max-w-3xl mx-auto">
-      {/* Header with navigation and delete */}
-      <div className="mb-6">
-        <button
-          onClick={() => router.push(`/space/${spaceId}`)}
-          className="text-slate-500 hover:text-indigo-600 text-sm font-medium mb-4 flex items-center gap-1 transition-colors"
-        >
-          ← Back to Space
-        </button>
-
-        <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold text-slate-800">{conversation.title}</h1>
+    <div className="flex flex-col h-full bg-slate-50/50">
+      {/* Header */}
+      <div className="glass-panel sticky top-0 z-10 px-6 py-4 flex items-center justify-between border-b border-slate-200/50 shadow-sm">
+        <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
-            onClick={() => {
-              if (confirm(`Delete conversation "${conversation.title}"?`)) {
-                dispatch({
-                  type: "DELETE_CONVERSATION",
-                  payload: { spaceId, conversationId: convId },
-                });
-                dispatch({
-                  type: "SET_BANNER",
-                  payload: { message: "Conversation deleted." },
-                });
-                router.push(`/space/${spaceId}`);
-              }
-            }}
-            className="px-4 py-2 bg-white border border-red-100 text-red-600 rounded-lg text-sm font-medium hover:bg-red-50 hover:border-red-200 transition-colors flex items-center gap-2"
+            onClick={() => router.push(`/space/${spaceId}`)}
+            className="p-2 -ml-2 rounded-full hover:bg-slate-100/80 text-slate-500 transition-colors"
+            title="Back to Space"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-              <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+              <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
             </svg>
-            Delete
           </button>
-        </div>
-      </div>
 
-      <div className="space-y-4 mb-4">
-        {conversation.messages.map((msg) => (
-          <div
-            key={msg.id}
-            className={`p-4 rounded-lg w-full ${
-              msg.role === "user"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-100 text-gray-900 border border-gray-200"
-            }`}
-          >
-            {msg.agentName && msg.role === "agent" && (
-              <div className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
-                {msg.agentName}
-              </div>
-            )}
-            {msg.agentName === "User" && (
-              <div className="text-xs font-bold text-blue-200 mb-1 uppercase tracking-wider">
-                You
-              </div>
-            )}
-
-            <div className={`prose ${msg.role === "user" ? "prose-invert" : ""} max-w-none prose-p:leading-relaxed prose-p:mb-4 prose-ul:my-4 prose-li:my-1`}>
-              <ReactMarkdown>{msg.content}</ReactMarkdown>
-            </div>
+          <div className="flex-1 min-w-0">
+             <input
+               type="text"
+               defaultValue={conversation.title}
+               onBlur={(e) => {
+                 const newTitle = e.target.value.trim();
+                 if (newTitle && newTitle !== conversation.title) {
+                   dispatch({
+                     type: "RENAME_CONVERSATION",
+                     payload: { spaceId, conversationId: convId, newTitle },
+                   });
+                 } else {
+                   e.target.value = conversation.title; // Reset if empty
+                 }
+               }}
+               onKeyDown={(e) => {
+                 if (e.key === "Enter") {
+                   e.currentTarget.blur();
+                 }
+               }}
+               className="text-lg font-bold text-slate-800 leading-tight bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none transition-colors w-full sm:w-auto"
+             />
+             <p className="text-xs text-slate-500 font-medium">{spaceAgentsCount(state, space)} Agents active</p>
           </div>
-        ))}
-      </div>
+        </div>
 
-      <div className="flex gap-2">
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type your message..."
-          className="border p-2 rounded flex-1"
-          onKeyDown={(e) => e.key === "Enter" && handleSend()}
-        />
         <button
-          onClick={handleSend}
-          className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-6 py-3 rounded-lg shadow-md hover:shadow-lg transition-all active:scale-95 flex items-center gap-2"
+          onClick={() => {
+            if (confirm(`Delete conversation "${conversation.title}"?`)) {
+              dispatch({
+                type: "DELETE_CONVERSATION",
+                payload: { spaceId, conversationId: convId },
+              });
+              router.push(`/space/${spaceId}`);
+            }
+          }}
+          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+          title="Delete Conversation"
         >
           <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path d="M3.105 2.288a.75.75 0 0 0-.826.95l1.414 4.926A1.5 1.5 0 0 0 5.135 9.25h6.115a.75.75 0 0 1 0 1.5H5.135a1.5 1.5 0 0 0-1.442 1.086l-1.414 4.926a.75.75 0 0 0 .826.95 28.897 28.897 0 0 0 15.293-7.155.75.75 0 0 0 0-1.114A28.897 28.897 0 0 0 3.105 2.288Z" />
+            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
           </svg>
-          Send
         </button>
+      </div>
+
+      {/* Messages Area */}
+      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+        {conversation.messages.length === 0 ? (
+           <div className="h-full flex flex-col items-center justify-center opacity-50">
+              <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4">
+                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-slate-400">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
+                </svg>
+              </div>
+              <p className="text-slate-500 font-medium">Start the conversation</p>
+           </div>
+        ) : (
+          conversation.messages.map((msg) => (
+            <div
+              key={msg.id}
+              className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}
+            >
+              <div
+                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm ${
+                  msg.role === "user"
+                    ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none"
+                    : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
+                }`}
+              >
+                {msg.role === "agent" && (
+                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
+                    <div className="w-5 h-5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-[10px] text-white font-bold uppercase">
+                      {msg.agentName?.[0] || "A"}
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+                         {msg.agentName}
+                       </span>
+                       {state.agents.find(a => a.id === msg.agentId)?.persona && (
+                          <span className="text-[12px] text-slate-400 font-medium">
+                            {state.agents.find(a => a.id === msg.agentId)?.persona}
+                          </span>
+                       )}
+                    </div>
+                  </div>
+                )}
+
+                <div className={`prose prose-sm ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-relaxed`}>
+                  <ReactMarkdown>{msg.content}</ReactMarkdown>
+                </div>
+              </div>
+            </div>
+          ))
+        )}
+        <div ref={messagesEndRef} />
+      </div>
+
+      {/* Input Area */}
+      <div className="p-4 bg-white border-t border-slate-200">
+        <div className="max-w-4xl mx-auto relative flex gap-3">
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type your message..."
+            className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-100 text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner"
+            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            disabled={isTyping}
+          />
+          <button
+            onClick={handleSend}
+            disabled={!newMessage.trim() || isTyping}
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center"
+          >
+             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+              <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
+            </svg>
+          </button>
+        </div>
+        <p className="text-center text-xs text-slate-400 mt-2">
+          AI agents can make mistakes. Please verify important information.
+        </p>
       </div>
     </div>
   );
+}
+
+// Helper to count agents
+function spaceAgentsCount(state: any, space: any) {
+  return state.agents.filter((a: any) => (space.agentIds || []).includes(a.id)).length;
 }

@@ -104,6 +104,47 @@ export const reducer = (state: AppState, action: Action): AppState => {
       };
     }
 
+    case "UPDATE_MESSAGE": {
+      const { spaceId, conversationId, messageId, content } = action.payload;
+
+      return {
+        ...state,
+        spaces: state.spaces.map((space) => {
+          if (space.id !== spaceId) return space;
+          return {
+            ...space,
+            conversations: space.conversations.map((conv) => {
+              if (conv.id !== conversationId) return conv;
+              return {
+                ...conv,
+                messages: conv.messages.map((msg) =>
+                  msg.id === messageId ? { ...msg, content } : msg
+                ),
+              };
+            }),
+          };
+        }),
+      };
+    }
+
+    case "RENAME_CONVERSATION": {
+      const { spaceId, conversationId, newTitle } = action.payload;
+
+      return {
+        ...state,
+        spaces: state.spaces.map((space) => {
+          if (space.id !== spaceId) return space;
+          return {
+            ...space,
+            conversations: space.conversations.map((conv) => {
+              if (conv.id !== conversationId) return conv;
+              return { ...conv, title: newTitle };
+            }),
+          };
+        }),
+      };
+    }
+
     case "DELETE_CONVERSATION": {
       const { spaceId, conversationId } = action.payload;
 

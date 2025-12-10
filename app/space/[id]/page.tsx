@@ -14,6 +14,7 @@ export default function SpacePage() {
   const [isEditing, setIsEditing] = useState(false);
   const [isAddingAgent, setIsAddingAgent] = useState(false);
   const [selectedAgentId, setSelectedAgentId] = useState("");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newName, setNewName] = useState("");
 
   const spaces = state.spaces;
@@ -241,20 +242,51 @@ export default function SpacePage() {
               {isAddingAgent ? (
                 <div className="bg-slate-50 p-4 rounded-lg border border-slate-200 animate-in fade-in slide-in-from-top-2 duration-200">
                   <label className="block text-xs font-bold text-slate-500 uppercase mb-2">Add Existing Agent</label>
-                  <select
-                    className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm mb-3 focus:ring-2 focus:ring-blue-500 outline-none"
-                    value={selectedAgentId}
-                    onChange={(e) => setSelectedAgentId(e.target.value)}
-                  >
-                    <option value="">Select an agent...</option>
-                    {state.agents
-                      .filter((a) => !(space.agentIds || []).includes(a.id))
-                      .map((agent) => (
-                        <option key={agent.id} value={agent.id}>
-                          {agent.name}
-                        </option>
-                      ))}
-                  </select>
+                  <div className="relative mb-3">
+                    <button
+                      onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                      className="w-full text-left bg-white border border-slate-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 outline-none flex items-center justify-between"
+                    >
+                      {selectedAgentId ? (
+                        <span className="text-slate-800">
+                          {state.agents.find(a => a.id === selectedAgentId)?.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400">Select an agent...</span>
+                      )}
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-400">
+                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
+                      </svg>
+                    </button>
+
+                    {isDropdownOpen && (
+                      <div className="absolute z-10 w-full mt-1 bg-white border border-slate-200 rounded-lg shadow-lg max-h-60 overflow-y-auto">
+                        {state.agents
+                          .filter((a) => !(space.agentIds || []).includes(a.id))
+                          .length === 0 ? (
+                           <div className="p-3 text-sm text-slate-500 text-center italic">No available agents to add.</div>
+                        ) : (
+                          state.agents
+                            .filter((a) => !(space.agentIds || []).includes(a.id))
+                            .map((agent) => (
+                              <button
+                                key={agent.id}
+                                onClick={() => {
+                                  setSelectedAgentId(agent.id);
+                                  setIsDropdownOpen(false);
+                                }}
+                                className="w-full text-left px-3 py-2 text-sm hover:bg-indigo-50 transition-colors flex flex-col items-start border-b border-slate-50 last:border-0"
+                              >
+                                <span className="font-medium text-slate-800">{agent.name}</span>
+                                {agent.persona && (
+                                  <span className="text-xs text-slate-500">{agent.persona}</span>
+                                )}
+                              </button>
+                            ))
+                        )}
+                      </div>
+                    )}
+                  </div>
 
                   <div className="flex gap-2">
                     <button
