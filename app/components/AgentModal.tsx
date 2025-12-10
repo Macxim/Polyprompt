@@ -15,6 +15,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
   const [persona, setPersona] = useState("");
   const [description, setDescription] = useState("");
   const [model, setModel] = useState<"gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo">("gpt-4o-mini");
+  const [temperature, setTemperature] = useState(0.7);
   const [nameError, setNameError] = useState("");
   const [personaError, setPersonaError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
@@ -31,11 +32,13 @@ export default function AgentModal({ onAgentCreated }: Props) {
         setPersona(activeAgent.persona);
         setDescription(activeAgent.description || "");
         setModel(activeAgent.model || "gpt-4o-mini");
+        setTemperature(activeAgent.temperature ?? 0.7);
       } else {
         setName("");
         setPersona("");
         setDescription("");
         setModel("gpt-4o-mini");
+        setTemperature(0.7);
       }
       setNameError("");
       setPersonaError("");
@@ -65,14 +68,14 @@ export default function AgentModal({ onAgentCreated }: Props) {
     if (activeAgent) {
       dispatch({
         type: "UPDATE_AGENT",
-        payload: { ...activeAgent, name, persona, description, model },
+        payload: { ...activeAgent, name, persona, description, model, temperature },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent updated." } });
     } else {
       const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       dispatch({
         type: "ADD_AGENT",
-        payload: { id: newId, name, persona, description, model },
+        payload: { id: newId, name, persona, description, model, temperature },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent created." } });
 
@@ -148,6 +151,77 @@ export default function AgentModal({ onAgentCreated }: Props) {
               {model === "gpt-4o-mini" && "Best balance of speed and quality. ~$0.15 per 1M tokens."}
               {model === "gpt-4o" && "Most advanced model. ~$2.50 per 1M tokens."}
               {model === "gpt-3.5-turbo" && "Older model, cheapest option. ~$0.50 per 1M tokens."}
+            </p>
+          </div>
+
+
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Temperature: {temperature.toFixed(1)}
+              <span className="ml-2 text-xs font-normal text-slate-500">
+                {temperature < 0.3 && "🎯 Focused & Deterministic"}
+                {temperature >= 0.3 && temperature < 0.7 && "⚖️ Balanced"}
+                {temperature >= 0.7 && "🎨 Creative & Varied"}
+              </span>
+            </label>
+            <div className="relative">
+              <input
+                type="range"
+                min="0"
+                max="1"
+                step="0.1"
+                value={temperature}
+                onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{
+                  background: `linear-gradient(to right,
+                    rgba(59, 130, 246, 0.3) 0%,
+                    rgba(99, 102, 241, 0.3) ${temperature * 50}%,
+                    rgba(168, 85, 247, 0.3) ${temperature * 100}%,
+                    rgba(236, 72, 153, 0.3) 100%)`,
+                }}
+              />
+              <style jsx>{`
+                input[type="range"]::-webkit-slider-thumb {
+                  appearance: none;
+                  width: 18px;
+                  height: 18px;
+                  border-radius: 50%;
+                  background: white;
+                  border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                  cursor: pointer;
+                  transition: all 0.2s;
+                }
+                input[type="range"]::-webkit-slider-thumb:hover {
+                  transform: scale(1.1);
+                  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+                }
+                input[type="range"]::-moz-range-thumb {
+                  width: 18px;
+                  height: 18px;
+                  border-radius: 50%;
+                  background: white;
+                  border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
+                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                  cursor: pointer;
+                  transition: all 0.2s;
+                }
+                input[type="range"]::-moz-range-thumb:hover {
+                  transform: scale(1.1);
+                  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+                }
+              `}</style>
+            </div>
+            <div className="flex justify-between text-xs text-slate-400 mt-1">
+              <span>0.0 (Precise)</span>
+              <span>0.5 (Moderate)</span>
+              <span>1.0 (Creative)</span>
+            </div>
+            <p className="text-xs text-slate-500 mt-2">
+              {temperature < 0.3 && "Low temperature produces consistent, focused responses. Best for factual tasks."}
+              {temperature >= 0.3 && temperature < 0.7 && "Balanced temperature for general-purpose conversations."}
+              {temperature >= 0.7 && "High temperature produces more creative and varied responses. Best for brainstorming."}
             </p>
           </div>
 
