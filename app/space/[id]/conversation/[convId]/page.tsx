@@ -15,6 +15,7 @@ export default function ConversationPage() {
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
+  const [showExportMenu, setShowExportMenu] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -196,6 +197,73 @@ export default function ConversationPage() {
     }
   };
 
+  // Export functions
+  const downloadFile = (content: string, filename: string, mimeType: string) => {
+    const blob = new Blob([content], { type: mimeType });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const exportAsMarkdown = () => {
+    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    let content = `# ${conversation.title}\n\n`;
+    content += `*Exported on ${new Date().toLocaleString()}*\n\n`;
+    content += `---\n\n`;
+
+    conversation.messages.forEach(msg => {
+      const agentInfo = msg.role === 'agent' && msg.agentId
+        ? spaceAgents.find(a => a.id === msg.agentId)
+        : null;
+      const name = msg.role === 'user' ? 'User' : (msg.agentName || 'Agent');
+      const persona = agentInfo?.persona ? ` *(${agentInfo.persona})*` : '';
+
+      content += `**${name}**${persona}\n\n${msg.content}\n\n---\n\n`;
+    });
+
+    const filename = `${conversation.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.md`;
+    downloadFile(content, filename, 'text/markdown');
+    setShowExportMenu(false);
+  };
+
+  const exportAsJSON = () => {
+    const exportData = {
+      title: conversation.title,
+      exportedAt: new Date().toISOString(),
+      messageCount: conversation.messages.length,
+      messages: conversation.messages.map(msg => ({
+        role: msg.role,
+        content: msg.content,
+        agentName: msg.agentName,
+        agentId: msg.agentId,
+        timestamp: msg.timestamp,
+      })),
+    };
+
+    const content = JSON.stringify(exportData, null, 2);
+    const filename = `${conversation.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.json`;
+    downloadFile(content, filename, 'application/json');
+    setShowExportMenu(false);
+  };
+
+  const exportAsPlainText = () => {
+    let content = `${conversation.title}\n`;
+    content += `Exported on ${new Date().toLocaleString()}\n`;
+    content += `${'='.repeat(50)}\n\n`;
+
+    conversation.messages.forEach(msg => {
+      const name = msg.role === 'user' ? 'User' : (msg.agentName || 'Agent');
+      content += `${name}:\n${msg.content}\n\n`;
+    });
+
+    const filename = `${conversation.title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-${Date.now()}.txt`;
+    downloadFile(content, filename, 'text/plain');
+    setShowExportMenu(false);
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
       {/* Header */}
@@ -237,7 +305,48 @@ export default function ConversationPage() {
           </div>
         </div>
 
-        <button
+        <div className="flex items-center gap-2">
+          {/* Export Dropdown */}
+          <div className="relative">
+            <button
+              onClick={() => setShowExportMenu(!showExportMenu)}
+              className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+              title="Export Conversation"
+            >
+              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
+                <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
+              </svg>
+            </button>
+
+            {showExportMenu && (
+              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20">
+                <button
+                  onClick={exportAsMarkdown}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <span>📝</span>
+                  <span>Markdown</span>
+                </button>
+                <button
+                  onClick={exportAsJSON}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <span>📄</span>
+                  <span>JSON</span>
+                </button>
+                <button
+                  onClick={exportAsPlainText}
+                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                >
+                  <span>📃</span>
+                  <span>Plain Text</span>
+                </button>
+              </div>
+            )}
+          </div>
+
+          <button
           onClick={() => {
             if (confirm(`Delete conversation "${conversation.title}"?`)) {
               dispatch({
@@ -254,6 +363,7 @@ export default function ConversationPage() {
             <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
           </svg>
         </button>
+        </div>
       </div>
 
       {/* Messages Area */}
