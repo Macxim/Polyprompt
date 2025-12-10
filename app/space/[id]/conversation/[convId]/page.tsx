@@ -12,7 +12,11 @@ export default function ConversationPage() {
   const router = useRouter();
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
+  const [showMentionDropdown, setShowMentionDropdown] = useState(false);
+  const [mentionSearch, setMentionSearch] = useState("");
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Validate params
   if (
@@ -74,9 +78,27 @@ export default function ConversationPage() {
       return;
     }
 
+    // Parse @mentions from the message
+    const mentionMatches = newMessage.match(/@(\w+)/g);
+    const mentionedNames = mentionMatches?.map(m => m.slice(1).toLowerCase()) || [];
+
+    // Filter agents: if mentions exist, only invoke mentioned agents; otherwise invoke all
+    const agentsToInvoke = mentionedNames.length > 0
+      ? spaceAgents.filter(agent => mentionedNames.includes(agent.name.toLowerCase()))
+      : spaceAgents;
+
+    if (agentsToInvoke.length === 0 && mentionedNames.length > 0) {
+      setIsTyping(false);
+      dispatch({
+        type: "SET_BANNER",
+        payload: { message: "No matching agents found for your @mentions." },
+      });
+      return;
+    }
+
     try {
       // Process each agent sequentially
-      for (const agent of spaceAgents) {
+      for (const agent of agentsToInvoke) {
         // Create a temporary message for streaming
         const agentMsgId = Date.now().toString(36) + Math.random().toString(36).substr(2);
         const initialAgentMessage: Message = {
@@ -288,14 +310,119 @@ export default function ConversationPage() {
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-slate-200">
-        <div className="max-w-4xl mx-auto relative flex gap-3">
+        <div className="max-w-4xl mx-auto relative">
+          {/* Autocomplete Dropdown */}
+          {showMentionDropdown && (() => {
+            const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+            const filteredAgents = spaceAgents.filter(agent =>
+              agent.name.toLowerCase().includes(mentionSearch.toLowerCase())
+            );
+
+            return filteredAgents.length > 0 ? (
+              <div className="absolute bottom-full left-0 right-0 mb-2 bg-white border border-slate-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                {filteredAgents.map((agent, index) => (
+                  <button
+                    key={agent.id}
+                    onClick={() => {
+                      const cursorPos = inputRef.current?.selectionStart || 0;
+                      const textBeforeCursor = newMessage.slice(0, cursorPos);
+                      const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+                      const textAfterCursor = newMessage.slice(cursorPos);
+                      const newText = newMessage.slice(0, lastAtIndex) + `@${agent.name} ` + textAfterCursor;
+                      setNewMessage(newText);
+                      setShowMentionDropdown(false);
+                      inputRef.current?.focus();
+                    }}
+                    className={`w-full text-left px-4 py-2.5 hover:bg-indigo-50 transition-colors flex items-center gap-3 ${
+                      index === selectedMentionIndex ? 'bg-indigo-50' : ''
+                    }`}
+                  >
+                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-sm">
+                      {agent.name[0].toUpperCase()}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="font-medium text-slate-800">@{agent.name}</div>
+                      {agent.persona && (
+                        <div className="text-xs text-slate-500 truncate">{agent.persona}</div>
+                      )}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : null;
+          })()}
+
+          <div className="flex gap-3">
           <input
+            ref={inputRef}
             type="text"
             value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            placeholder="Type your message..."
-            className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-100 text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner"
-            onKeyDown={(e) => e.key === "Enter" && handleSend()}
+            onChange={(e) => {
+              const value = e.target.value;
+              setNewMessage(value);
+
+              // Detect @ mentions
+              const cursorPos = e.target.selectionStart || 0;
+              const textBeforeCursor = value.slice(0, cursorPos);
+              const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+
+              if (lastAtIndex !== -1 && lastAtIndex === textBeforeCursor.length - 1) {
+                // Just typed @
+                setShowMentionDropdown(true);
+                setMentionSearch('');
+                setSelectedMentionIndex(0);
+              } else if (lastAtIndex !== -1) {
+                // Typing after @
+                const searchText = textBeforeCursor.slice(lastAtIndex + 1);
+                if (/^\w*$/.test(searchText)) {
+                  setShowMentionDropdown(true);
+                  setMentionSearch(searchText);
+                  setSelectedMentionIndex(0);
+                } else {
+                  setShowMentionDropdown(false);
+                }
+              } else {
+                setShowMentionDropdown(false);
+              }
+            }}
+            placeholder="Type your message... (use @ to mention agents)"
+            className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner outline-none"
+            onKeyDown={(e) => {
+              if (showMentionDropdown) {
+                const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+                const filteredAgents = spaceAgents.filter(agent =>
+                  agent.name.toLowerCase().includes(mentionSearch.toLowerCase())
+                );
+
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  setSelectedMentionIndex((prev) =>
+                    prev < filteredAgents.length - 1 ? prev + 1 : prev
+                  );
+                } else if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  setSelectedMentionIndex((prev) => prev > 0 ? prev - 1 : 0);
+                } else if (e.key === 'Enter' && filteredAgents.length > 0) {
+                  e.preventDefault();
+                  const selectedAgent = filteredAgents[selectedMentionIndex];
+                  const cursorPos = inputRef.current?.selectionStart || 0;
+                  const textBeforeCursor = newMessage.slice(0, cursorPos);
+                  const lastAtIndex = textBeforeCursor.lastIndexOf('@');
+                  const textAfterCursor = newMessage.slice(cursorPos);
+                  const newText = newMessage.slice(0, lastAtIndex) + `@${selectedAgent.name} ` + textAfterCursor;
+                  setNewMessage(newText);
+                  setShowMentionDropdown(false);
+                  return;
+                } else if (e.key === 'Escape') {
+                  setShowMentionDropdown(false);
+                  return;
+                }
+              }
+
+              if (e.key === 'Enter' && !showMentionDropdown) {
+                handleSend();
+              }
+            }}
             disabled={isTyping}
           />
           <button
@@ -307,10 +434,11 @@ export default function ConversationPage() {
               <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
             </svg>
           </button>
+          </div>
+          <p className="text-center text-xs text-slate-400 mt-2">
+            AI agents can make mistakes. Please verify important information.
+          </p>
         </div>
-        <p className="text-center text-xs text-slate-400 mt-2">
-          AI agents can make mistakes. Please verify important information.
-        </p>
       </div>
     </div>
   );

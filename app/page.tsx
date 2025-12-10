@@ -81,7 +81,7 @@ export default function Home() {
           <div className="flex gap-3">
             <input
               ref={nameInputRef}
-              className={`flex-1 px-4 py-3 bg-white rounded-lg border border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition shadow-sm ${
+              className={`flex-1 px-4 py-3 bg-white rounded-lg border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition shadow-sm ${
                 nameError ? "border-red-500" : ""
               }`}
               value={name}
