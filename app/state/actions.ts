@@ -30,5 +30,7 @@ export type Action =
   | { type: "CLOSE_SPACE_MODAL" }
   | { type: "OPEN_CONVERSATION_MODAL" }
   | { type: "CLOSE_CONVERSATION_MODAL" }
+  | { type: "TOGGLE_SIDEBAR" }
+  | { type: "SET_SIDEBAR_OPEN"; payload: boolean }
   | { type: "SET_BANNER"; payload: { message: string | null } }
   | { type: "HYDRATE_APP"; payload: AppState };

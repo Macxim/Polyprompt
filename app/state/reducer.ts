@@ -9,6 +9,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
         ui: {
           ...action.payload.ui,
           isConversationModalOpen: (action.payload.ui as any).isConversationModalOpen ?? false,
+          isSidebarOpen: (action.payload.ui as any).isSidebarOpen ?? false,
         },
         _hydrated: true,
       };
@@ -199,6 +200,18 @@ export const reducer = (state: AppState, action: Action): AppState => {
       return {
         ...state,
         ui: { ...state.ui, isConversationModalOpen: false },
+      };
+
+    case "TOGGLE_SIDEBAR":
+      return {
+        ...state,
+        ui: { ...state.ui, isSidebarOpen: !state.ui.isSidebarOpen },
+      };
+
+    case "SET_SIDEBAR_OPEN":
+      return {
+        ...state,
+        ui: { ...state.ui, isSidebarOpen: action.payload },
       };
 
     case "SET_BANNER":
