@@ -37,6 +37,7 @@ export default function ConversationPage() {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       role: "user",
       content: newMessage,
+      agentName: "User", // Explicitly label user
     };
 
     // Dispatch user message
@@ -49,11 +50,13 @@ export default function ConversationPage() {
       },
     });
 
-    // Dispatch automatic agent replies
     setNewMessage("");
 
     // Dispatch automatic agent replies
     const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+
+    // Construct history including the new user message
+    const currentHistory = [...conversation.messages, userMessage];
 
     spaceAgents.forEach(async (agent) => {
       // 1. Create a placeholder message for loading state (optional, or just wait)
@@ -69,7 +72,11 @@ export default function ConversationPage() {
             name: agent.name,
             persona: agent.persona,
             description: agent.description,
-            content: newMessage // Context: User's last message. Ideally full history, but start simple.
+            history: currentHistory.map(m => ({
+              role: m.role,
+              content: m.content,
+              agentName: m.agentName // Pass the name so backend can transcript it
+            }))
           })
         });
 
@@ -81,6 +88,8 @@ export default function ConversationPage() {
           id: Date.now().toString(36) + Math.random().toString(36).substr(2),
           role: "agent",
           content: data.content || "I couldn't think of anything to say.",
+          agentId: agent.id,
+          agentName: agent.name,
         };
 
         dispatch({

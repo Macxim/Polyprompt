@@ -10,6 +10,8 @@ export type Message = {
   id: string;
   role: "user" | "agent";
   content: string;
+  agentId?: string;
+  agentName?: string;
 };
 
 export type Conversation = {

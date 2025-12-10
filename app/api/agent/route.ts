@@ -3,17 +3,17 @@ import { runAgent } from "../../../lib/agent";
 
 export async function POST(req: NextRequest) {
   try {
-    const { name, persona, description, content } = await req.json();
+    const { name, persona, description, history } = await req.json();
 
-    if (!content) {
+    if (!history || !Array.isArray(history)) {
       return NextResponse.json(
-        { error: "No message provided" },
+        { error: "No history provided" },
         { status: 400 }
       );
     }
 
     // Call Groq agent
-    const agentResponse = await runAgent(name, persona, description, content);
+    const agentResponse = await runAgent(name, persona, description, history);
 
     return NextResponse.json({ content: agentResponse });
   } catch (err) {
