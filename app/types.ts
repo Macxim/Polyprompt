@@ -4,6 +4,8 @@ export type Agent = {
   persona: string;
   messages?: Message[];
   description?: string;
+  model?: "gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo";
+  temperature?: number; // 0-1, default 0.7
 };
 
 export type Message = {
@@ -12,6 +14,8 @@ export type Message = {
   content: string;
   agentId?: string;
   agentName?: string;
+  timestamp?: number;
+  isStreaming?: boolean;
 };
 
 export type Conversation = {

@@ -51,6 +51,7 @@ export default function ConversationPage() {
       role: "user",
       content: newMessage,
       agentName: "User",
+      timestamp: Date.now(),
     };
 
     // 1. Add user message
@@ -63,105 +64,114 @@ export default function ConversationPage() {
     setIsTyping(true);
 
     const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
-    // current history + new message
-    const currentHistory = [...conversation.messages, userMessage];
 
-    // 2. Trigger agents
-    // Note: For multiple agents, we might want to sequence them or show multiple typing indicators.
-    // For simplicity, we'll fire them all but logically it might be chaotic.
-    // Let's assume one main agent for now or handle them concurrently.
-
-    const agentPromises = spaceAgents.map(async (agent) => {
-      // Create a temporary ID for this agent's message so we can stream into it
-      const agentMsgId = Date.now().toString(36) + Math.random().toString(36).substr(2) + agent.id;
-
-      // Initialize empty agent message
-      const initialAgentMessage: Message = {
-        id: agentMsgId,
-        role: "agent",
-        content: "",
-        agentId: agent.id,
-        agentName: agent.name,
-      };
-
-      // We add the empty message first effectively acting as "typing" that fills up
+    if (spaceAgents.length === 0) {
+      setIsTyping(false);
       dispatch({
-        type: "ADD_MESSAGE",
-        payload: { spaceId, conversationId: convId, message: initialAgentMessage },
+        type: "SET_BANNER",
+        payload: { message: "No agents available in this space." },
       });
+      return;
+    }
 
-      try {
-        const res = await fetch("/api/agent", {
+    try {
+      // Process each agent sequentially
+      for (const agent of spaceAgents) {
+        // Create a temporary message for streaming
+        const agentMsgId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        const initialAgentMessage: Message = {
+          id: agentMsgId,
+          role: "agent",
+          content: "",
+          agentId: agent.id,
+          agentName: agent.name,
+          timestamp: Date.now(),
+          isStreaming: true,
+        };
+
+        // Add empty agent message
+        dispatch({
+          type: "ADD_MESSAGE",
+          payload: { spaceId, conversationId: convId, message: initialAgentMessage },
+        });
+
+        // Call the chat API for this agent
+        const res = await fetch("/api/chat", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: agent.name,
-            persona: agent.persona,
-            description: agent.description,
-            history: currentHistory.map((m) => ({
-              role: m.role,
-              content: m.content,
-              agentName: m.agentName,
-            })),
+            messages: [userMessage],
+            agent: {
+              name: agent.name,
+              persona: agent.persona,
+              model: agent.model || "gpt-4o-mini",
+              temperature: agent.temperature ?? 0.7,
+            },
+            conversationHistory: conversation.messages,
           }),
         });
 
-        if (!res.ok || !res.body) throw new Error("Agent failed to reply");
+        if (!res.ok) {
+          throw new Error(`API error: ${res.status}`);
+        }
 
-        // Stream reader
+        if (!res.body) {
+          throw new Error("No response body");
+        }
+
+        // Stream the response
         const reader = res.body.getReader();
         const decoder = new TextDecoder();
-        let done = false;
         let streamedContent = "";
 
-        while (!done) {
-          const { value, done: DONE } = await reader.read();
-          done = DONE;
-          if (value) {
-            const chunk = decoder.decode(value, { stream: true });
-            streamedContent += chunk;
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
 
-            // Dispatch update to existing message
-            // We need a new action type or just use standard UPDATE_MESSAGE if we had one,
-            // or we can hack it by using ADD_MESSAGE if logic allows replacing (it doesn't usually).
-            // Let's assume we need to update the LAST message or specific ID.
-            // Our reducer needs to support updating a message. Checks reducer...
-            // Checking reducer.ts would have been good. Let's assume we might need to add UPDATE_MESSAGE_CONTENT capability.
-            // Wait, looking at current reducer capability... I didn't verify if UPDATE_MESSAGE exists.
-            // Safe bet: For now, I'll assume I might need to replace the message list or hack it.
-            // actually, let's check reducer file in next step if this fails or just add a TODO.
-            // BUT WAIT, I am in code edit mode. I should verify reducer first?
-            // I'll check reducer in a parallel tool call? I can't.
-            // I'll take a safe guess: I'll use a local state for the stream and then dispatch the final one?
-            // No, that ruins the streaming effect for the user.
+          const chunk = decoder.decode(value, { stream: true });
+          streamedContent += chunk;
 
-            // NOTE: I will use a custom action naming convention here. I likely need to adding UPDATE_MESSAGE to reducer.
-            // I will implement the logic here assuming I WILL add `UPDATE_MESSAGE` to reducer in next steps if not present.
-            // OR I can use a local "streaming" state only for the UI and then commit to global state at the end.
-            // That is often safer for Redux-like global stores to avoid thrashing.
-
-            // Let's do LOCAL STREAMING STATE for the active message in this component?
-            // Complex with multiple agents.
-
-            // Plan: I'll dispatch `UPDATE_MESSAGE` and I will ensure I add it to reducer.ts in the next turn if it's missing.
-            dispatch({
-               type: "UPDATE_MESSAGE",
-               payload: {
-                 spaceId,
-                 conversationId: convId,
-                 messageId: agentMsgId,
-                 content: streamedContent
-               }
-            } as any); // Cast as any because I haven't updated types yet
-          }
+          // Update the message content
+          dispatch({
+            type: "UPDATE_MESSAGE",
+            payload: {
+              spaceId,
+              conversationId: convId,
+              messageId: agentMsgId,
+              content: streamedContent,
+            },
+          });
         }
-      } catch (error) {
-        console.error("Stream error", error);
-      }
-    });
 
-    await Promise.all(agentPromises);
-    setIsTyping(false);
+        // Mark streaming as complete
+        dispatch({
+          type: "UPDATE_MESSAGE",
+          payload: {
+            spaceId,
+            conversationId: convId,
+            messageId: agentMsgId,
+            content: streamedContent,
+          },
+        });
+
+        // Small delay between agents for better UX
+        if (spaceAgents.indexOf(agent) < spaceAgents.length - 1) {
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+      }
+    } catch (error: any) {
+      console.error("Chat error:", error);
+      dispatch({
+        type: "SET_BANNER",
+        payload: {
+          message: error.message === "API error: 401"
+            ? "Invalid API key. Please check your .env.local file."
+            : "Failed to get response. Please try again."
+        },
+      });
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (
