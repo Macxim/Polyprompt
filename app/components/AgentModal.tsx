@@ -83,22 +83,26 @@ export default function AgentModal({ onAgentCreated }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg w-full max-w-md shadow-lg">
-        <h2 className="text-2xl font-semibold mb-4">
+      <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+        <h2 className="text-2xl font-bold text-slate-800 mb-4">
           {activeAgent ? "Edit Agent" : "Create New Agent"}
         </h2>
 
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium mb-1">Name</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Name
+            </label>
             <input
               type="text"
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              placeholder="e.g., Marketing Expert"
               value={name}
               onChange={(e) => {
                 setName(e.target.value);
                 if (nameError) setNameError("");
               }}
+              autoFocus={!activeAgent}
             />
             {nameError && (
               <p className="text-red-600 text-sm mt-1">{nameError}</p>
@@ -106,10 +110,13 @@ export default function AgentModal({ onAgentCreated }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Persona</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Persona
+            </label>
             <input
               type="text"
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+              placeholder="e.g., Expert copywriter with 10 years experience"
               value={persona}
               onChange={(e) => {
                 setPersona(e.target.value);
@@ -122,10 +129,13 @@ export default function AgentModal({ onAgentCreated }: Props) {
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1">Description</label>
+            <label className="block text-sm font-medium text-slate-700 mb-2">
+              Description
+            </label>
             <textarea
-              className="w-full border rounded px-3 py-2"
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
               rows={3}
+              placeholder="Optional description..."
               value={description}
               onChange={(e) => {
                 setDescription(e.target.value);
@@ -133,27 +143,31 @@ export default function AgentModal({ onAgentCreated }: Props) {
               }}
               maxLength={200}
             />
-            <div className="text-right text-sm text-gray-500 mt-1">
-              {description.length}/200
+            <div className="flex justify-between items-center mt-1">
+              {descriptionError ? (
+                <p className="text-red-600 text-sm">{descriptionError}</p>
+              ) : (
+                <div></div>
+              )}
+              <div className="text-xs text-slate-400">
+                {description.length}/200
+              </div>
             </div>
-            {descriptionError && (
-              <p className="text-red-600 text-sm mt-1">{descriptionError}</p>
-            )}
           </div>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
           <button
             onClick={() => dispatch({ type: "CLOSE_AGENT_MODAL" })}
-            className="px-4 py-2 border rounded"
+            className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 font-medium hover:bg-slate-50 transition-colors"
           >
             Cancel
           </button>
           <button
             onClick={handleSubmit}
-            className="px-4 py-2 bg-blue-600 text-white rounded"
+            className="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 shadow-sm hover:shadow-md transition-all"
           >
-            Confirm
+            {activeAgent ? "Update Agent" : "Create Agent"}
           </button>
         </div>
       </div>
