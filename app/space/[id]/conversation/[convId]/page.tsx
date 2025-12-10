@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useParams } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
+import ReactMarkdown from "react-markdown";
 
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
@@ -111,17 +112,30 @@ export default function ConversationPage() {
     <div className="p-8 max-w-3xl mx-auto">
       <h1 className="text-2xl font-bold mb-4">{conversation.title}</h1>
 
-      <div className="space-y-2 mb-4">
+      <div className="space-y-4 mb-4">
         {conversation.messages.map((msg) => (
           <div
             key={msg.id}
-            className={`p-2 rounded max-w-xs ${
+            className={`p-4 rounded-lg w-full ${
               msg.role === "user"
-                ? "bg-blue-500 text-white ml-auto"
-                : "bg-gray-200 text-black mr-auto"
+                ? "bg-blue-600 text-white"
+                : "bg-gray-100 text-gray-900 border border-gray-200"
             }`}
           >
-            {msg.content}
+            {msg.agentName && msg.role === "agent" && (
+              <div className="text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider">
+                {msg.agentName}
+              </div>
+            )}
+            {msg.agentName === "User" && (
+              <div className="text-xs font-bold text-blue-200 mb-1 uppercase tracking-wider">
+                You
+              </div>
+            )}
+
+            <div className={`prose ${msg.role === "user" ? "prose-invert" : ""} max-w-none prose-p:leading-relaxed prose-p:mb-4 prose-ul:my-4 prose-li:my-1`}>
+              <ReactMarkdown>{msg.content}</ReactMarkdown>
+            </div>
           </div>
         ))}
       </div>
