@@ -7,6 +7,7 @@ import { useState } from "react";
 import AgentModal from "@/app/components/AgentModal";
 import Banner from "@/app/components/Banner";
 import ConversationModal from "@/app/components/ConversationModal";
+import AvatarDisplay from "@/app/components/AvatarDisplay";
 
 export default function SpacePage() {
   const { state, dispatch } = useApp();
@@ -215,7 +216,10 @@ export default function SpacePage() {
                 {spaceAgents.map((agent) => (
                   <li key={agent.id} className="pb-4 border-b border-slate-100 last:border-0 last:pb-0">
                     <div className="flex justify-between items-start mb-2">
-                       <span className="font-semibold text-slate-800">{agent.name}</span>
+                      <div className="flex items-center gap-2">
+                        <AvatarDisplay agent={agent} size="sm" />
+                        <span className="font-semibold text-slate-800">{agent.name}</span>
+                      </div>
                        <button
                         className="text-slate-400 hover:text-red-500 transition-colors"
                         onClick={() => removeAgentFromSpace(agent.id)}

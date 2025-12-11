@@ -5,6 +5,7 @@ import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
 import ReactMarkdown from "react-markdown";
+import AvatarDisplay from "@/app/components/AvatarDisplay";
 
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
@@ -456,9 +457,14 @@ export default function ConversationPage() {
               >
                 {msg.role === "agent" && (
                   <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
-                    <div className="w-5 h-5 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-[10px] text-white font-bold uppercase">
-                      {msg.agentName?.[0] || "A"}
-                    </div>
+                    <AvatarDisplay
+                      agent={{
+                        id: msg.agentId || "",
+                        name: msg.agentName || "Agent",
+                        avatar: state.agents.find(a => a.id === msg.agentId)?.avatar
+                      }}
+                      size="sm"
+                    />
                     <div className="flex items-baseline gap-2">
                        <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
                          {msg.agentName}
@@ -511,9 +517,10 @@ export default function ConversationPage() {
                       index === selectedMentionIndex ? 'bg-indigo-50' : ''
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-full bg-gradient-to-r from-pink-500 to-rose-500 flex items-center justify-center text-white font-bold text-sm">
-                      {agent.name[0].toUpperCase()}
-                    </div>
+                    <AvatarDisplay
+                      agent={agent}
+                      size="md"
+                    />
                     <div className="flex-1 min-w-0">
                       <div className="font-medium text-slate-800">@{agent.name}</div>
                       {agent.persona && (

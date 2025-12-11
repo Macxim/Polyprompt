@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useApp } from "../state/AppProvider";
+import AvatarDisplay from "./AvatarDisplay";
 
 type Props = {
   // Optional callback when a new agent is created,
@@ -16,6 +17,9 @@ export default function AgentModal({ onAgentCreated }: Props) {
   const [description, setDescription] = useState("");
   const [model, setModel] = useState<"gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo">("gpt-4o-mini");
   const [temperature, setTemperature] = useState(0.7);
+  const [avatar, setAvatar] = useState<string | null>(null);
+  const [avatarType, setAvatarType] = useState<"auto" | "emoji" | "url">("auto");
+  const [customUrl, setCustomUrl] = useState("");
   const [nameError, setNameError] = useState("");
   const [personaError, setPersonaError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
@@ -33,12 +37,26 @@ export default function AgentModal({ onAgentCreated }: Props) {
         setDescription(activeAgent.description || "");
         setModel(activeAgent.model || "gpt-4o-mini");
         setTemperature(activeAgent.temperature ?? 0.7);
+        setAvatar(activeAgent.avatar || null);
+
+        // Determine avatar type
+        if (!activeAgent.avatar) {
+          setAvatarType("auto");
+        } else if (activeAgent.avatar.length <= 2) {
+          setAvatarType("emoji");
+        } else {
+          setAvatarType("url");
+          setCustomUrl(activeAgent.avatar);
+        }
       } else {
         setName("");
         setPersona("");
         setDescription("");
         setModel("gpt-4o-mini");
         setTemperature(0.7);
+        setAvatar(null);
+        setAvatarType("auto");
+        setCustomUrl("");
       }
       setNameError("");
       setPersonaError("");
@@ -68,14 +86,14 @@ export default function AgentModal({ onAgentCreated }: Props) {
     if (activeAgent) {
       dispatch({
         type: "UPDATE_AGENT",
-        payload: { ...activeAgent, name, persona, description, model, temperature },
+        payload: { ...activeAgent, name, persona, description, model, temperature, avatar },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent updated." } });
     } else {
       const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       dispatch({
         type: "ADD_AGENT",
-        payload: { id: newId, name, persona, description, model, temperature },
+        payload: { id: newId, name, persona, description, model, temperature, avatar },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent created." } });
 
@@ -89,12 +107,101 @@ export default function AgentModal({ onAgentCreated }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-slate-800 mb-4">
           {activeAgent ? "Edit Agent" : "Create New Agent"}
         </h2>
 
         <div className="space-y-4">
+          {/* Avatar Preview & Selection */}
+          <div>
+            <label className="block text-sm font-medium text-slate-700 mb-3">
+              Avatar
+            </label>
+            <div className="flex items-center gap-4 mb-3">
+              <AvatarDisplay
+                agent={{ id: "preview", name: name || "Agent", avatar }}
+                size="xl"
+              />
+              <div className="flex-1">
+                <p className="text-xs text-slate-500 mb-2">Choose avatar style:</p>
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAvatarType("auto");
+                      setAvatar(null);
+                    }}
+                    className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                      avatarType === "auto"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Auto
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarType("emoji")}
+                    className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                      avatarType === "emoji"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Emoji
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAvatarType("url")}
+                    className={`px-3 py-1.5 text-xs rounded-lg font-medium transition-all ${
+                      avatarType === "url"
+                        ? "bg-indigo-600 text-white"
+                        : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                    }`}
+                  >
+                    Image
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {avatarType === "emoji" && (
+              <div className="bg-slate-50 p-3 rounded-lg">
+                <p className="text-xs text-slate-600 mb-2">Select an emoji:</p>
+                <div className="grid grid-cols-8 gap-2">
+                  {["😀", "😎", "🤖", "👨‍💼", "👩‍💼", "🧑‍💻", "👨‍🔬", "👩‍🔬", "🦸", "🦹", "🧙", "🧚", "🐱", "🐶", "🦊", "🐼", "🦁", "🐯", "🐸", "🐙", "🚀", "⭐", "💎", "🔥"].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => setAvatar(emoji)}
+                      className={`text-2xl p-2 rounded-lg hover:bg-white transition-colors ${
+                        avatar === emoji ? "bg-white ring-2 ring-indigo-500" : ""
+                      }`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {avatarType === "url" && (
+              <div>
+                <input
+                  type="text"
+                  placeholder="https://example.com/avatar.jpg"
+                  value={customUrl}
+                  onChange={(e) => {
+                    setCustomUrl(e.target.value);
+                    setAvatar(e.target.value);
+                  }}
+                  className="w-full border border-slate-300 rounded-lg px-4 py-2 text-sm text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all"
+                />
+                <p className="text-xs text-slate-500 mt-1">Enter a URL to an image</p>
+              </div>
+            )}
+          </div>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Name
