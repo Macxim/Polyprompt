@@ -26,7 +26,7 @@ export default function ConversationPage() {
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   // Validate params
   if (
@@ -446,7 +446,7 @@ export default function ConversationPage() {
         // Small delay between turns
         if (!step.type || step.type !== 'summary') {
            setIsThinking(true);
-           await new Promise(resolve => setTimeout(resolve, 1500));
+           await new Promise(resolve => setTimeout(resolve, 800));
            setIsThinking(false);
         }
       }
@@ -704,7 +704,7 @@ export default function ConversationPage() {
                   </div>
                 )}
 
-                <div className={`prose prose-sm ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-relaxed`}>
+                <div className={`prose prose-sm ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-relaxed overflow-x-auto`}>
                   <ReactMarkdown>{msg.content}</ReactMarkdown>
                 </div>
               </div>
@@ -767,14 +767,17 @@ export default function ConversationPage() {
             ) : null;
           })()}
 
-          <div className="flex gap-3">
-          <input
-            ref={inputRef}
-            type="text"
+          <div className="flex gap-3 items-end">
+          <textarea
+            ref={inputRef as any}
             value={newMessage}
             onChange={(e) => {
               const value = e.target.value;
               setNewMessage(value);
+
+              // Auto-resize
+              e.target.style.height = 'auto';
+              e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
 
               // Detect @ mentions
               const cursorPos = e.target.selectionStart || 0;
@@ -801,7 +804,8 @@ export default function ConversationPage() {
               }
             }}
             placeholder="Type your message... (use @ to mention agents)"
-            className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner outline-none"
+            className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner outline-none resize-none min-h-[52px]"
+            rows={1}
             onKeyDown={(e) => {
               if (showMentionDropdown) {
                 const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
@@ -823,7 +827,7 @@ export default function ConversationPage() {
                 } else if (e.key === 'Enter' && filteredAgents.length > 0) {
                   e.preventDefault();
                   const selectedAgent = filteredAgents[selectedMentionIndex];
-                  const cursorPos = inputRef.current?.selectionStart || 0;
+                  const cursorPos = (inputRef.current as any)?.selectionStart || 0;
                   const textBeforeCursor = newMessage.slice(0, cursorPos);
                   const lastAtIndex = textBeforeCursor.lastIndexOf('@');
                   const textAfterCursor = newMessage.slice(cursorPos);
@@ -837,10 +841,19 @@ export default function ConversationPage() {
                 }
               }
 
-              if (e.key === 'Enter' && !showMentionDropdown) {
+              if (e.key === 'Enter' && !e.shiftKey && !showMentionDropdown) {
+                e.preventDefault();
                 handleSend();
+                // Reset height
+                if (e.currentTarget) {
+                    e.currentTarget.style.height = 'auto';
+                }
+              } else if (e.key === 'Enter' && showMentionDropdown) {
+                  // Handled above
+              } else if (!showMentionDropdown) {
+                 // Allow newline
               } else {
-                setShowMentionDropdown(false);
+                 setShowMentionDropdown(false);
               }
             }}
             disabled={isTyping || isAutoMode}
