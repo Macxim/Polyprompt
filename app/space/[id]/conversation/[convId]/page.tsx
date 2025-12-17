@@ -6,6 +6,8 @@ import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
 import ReactMarkdown from "react-markdown";
 import AvatarDisplay from "@/app/components/AvatarDisplay";
+import ThinkingIndicator from "@/app/components/ThinkingIndicator";
+import AutoModeModal from "@/app/components/AutoModeModal";
 
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
@@ -17,6 +19,9 @@ export default function ConversationPage() {
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [isThinking, setIsThinking] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -252,6 +257,191 @@ export default function ConversationPage() {
     }
   };
 
+  // Helper function to send an agent message (used by Auto Mode)
+  const sendAgentMessage = async (agent: any, systemInstruction: string) => {
+    // strict requirement: we must use the LATEST conversation messages state
+    // But since state updates are async, we rely on passing the current history or updating it optimistically
+    // For auto-mode, we will re-fetch the latest history or rely on the dispatch updates which are synchronous in our reducer?
+    // Actually, reducers are sync but React state updates trigger re-renders.
+    // We should rely on the state from the store if possible, but inside a loop we might need to manually track the temporary history.
+
+    // For simplicity in this V1, we'll append to a local history array during the loop
+    // But actually, we can just use the updated `conversation.messages` if we break the loop or use a ref.
+
+    // Let's rely on the fact that dispatch updates the global store synchronously?
+    // No, React Context updates are not synchronous for reading in the same render cycle.
+    // So we will maintain a `currentHistory` array within the `handleAutoDiscuss` function.
+  };
+
+  const handleAutoDiscuss = async (mode: 'quick' | 'deep', explicitTopic?: string) => {
+    const topic = explicitTopic || newMessage.trim();
+
+    if (!topic) {
+      dispatch({ type: "SET_BANNER", payload: { message: "Please enter a topic first." } });
+      return;
+    }
+
+    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    if (spaceAgents.length < 2) {
+       dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode requires at least 2 agents in the space." } });
+       return;
+    }
+
+    setIsAutoMode(true);
+    setIsTyping(true);
+
+    try {
+      // 1. Send User Prompt
+      const userMessage: Message = {
+        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+        role: "user",
+        content: topic,
+        agentName: "User",
+        timestamp: Date.now(),
+      };
+
+      dispatch({
+        type: "ADD_MESSAGE",
+        payload: { spaceId, conversationId: convId, message: userMessage },
+      });
+      setNewMessage("");
+
+      // 2. Call Planner API
+      // Create a temporary loading indicator
+      dispatch({ type: "SET_BANNER", payload: { message: "Planning discussion..." } });
+
+      // Clear input and modal
+      setNewMessage("");
+      setIsAutoModalOpen(false);
+
+      const planRes = await fetch("/api/auto-plan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          prompt: userMessage.content,
+          agents: spaceAgents.map(a => ({ id: a.id, name: a.name, persona: a.persona })),
+          mode
+        }),
+      });
+
+      if (!planRes.ok) throw new Error("Failed to plan discussion");
+      const { plan } = await planRes.json();
+
+      if (!plan || plan.length === 0) {
+        throw new Error("No plan generated");
+      }
+
+      dispatch({ type: "SET_BANNER", payload: { message: `Auto-discussion started: ${plan.length} turns planned.` } });
+
+      // 3. Execute the Plan
+      // We need to track history locally because react state won't update fast enough in this loop?
+      // Actually, we can just re-read `conversation.messages` if we were using a ref, but `conversation` is a prop/derived state.
+      // So let's build a local `history` array starting with current messages + new user message
+      let history = [...conversation.messages, userMessage];
+
+      for (const step of plan) {
+        const agent = spaceAgents.find(a => a.id === step.agentId) || spaceAgents[0]; // Fallback if ID mismatch
+
+        // UI Scroll
+        scrollToBottom();
+
+        // Create placeholder for agent
+        const agentMsgId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        const initialAgentMessage: Message = {
+          id: agentMsgId,
+          role: "agent",
+          content: "",
+          agentId: agent.id,
+          agentName: agent.name,
+          timestamp: Date.now(),
+          isStreaming: true,
+          isSummary: step.type === 'summary'
+        };
+
+        dispatch({
+          type: "ADD_MESSAGE",
+          payload: { spaceId, conversationId: convId, message: initialAgentMessage },
+        });
+
+        // Add to local history for next context
+        const messageForHistory = { ...initialAgentMessage, content: "" }; // Will update content later
+
+        // Call Chat API with specific instruction
+        const res = await fetch("/api/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            messages: [{ role: "system", content: `Instruction for this turn: ${step.instruction}` }, ...history],
+            agent: {
+              name: agent.name,
+              persona: agent.persona,
+              model: agent.model || "gpt-4o-mini",
+              temperature: agent.temperature ?? 0.7,
+            },
+            conversationHistory: history, // We might need to handle this carefully if the API uses one vs the other
+          }),
+        });
+
+        if (!res.ok || !res.body) throw new Error("Chat API failed");
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder();
+        let streamedContent = "";
+        let tokenUsage = null;
+
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          const chunk = decoder.decode(value, { stream: true });
+
+          if (chunk.includes('__TOKENS__')) {
+            const parts = chunk.split('__TOKENS__');
+            streamedContent += parts[0];
+            try { tokenUsage = JSON.parse(parts[1]); } catch (e) {}
+          } else {
+            streamedContent += chunk;
+          }
+
+          dispatch({
+            type: "UPDATE_MESSAGE",
+            payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent },
+          });
+        }
+
+        // Finalize message
+        dispatch({
+          type: "UPDATE_MESSAGE",
+          payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent, tokens: tokenUsage },
+        });
+
+        // Update local history for next iteration
+        messageForHistory.content = streamedContent;
+        history.push(messageForHistory);
+
+        // Small delay between turns
+        if (!step.type || step.type !== 'summary') {
+           setIsThinking(true);
+           await new Promise(resolve => setTimeout(resolve, 1500));
+           setIsThinking(false);
+        }
+      }
+
+      dispatch({ type: "SET_BANNER", payload: { message: "Auto-discussion complete." } });
+
+    } catch (error: any) {
+      console.error("Auto-discuss error:", error);
+      dispatch({ type: "SET_BANNER", payload: { message: "Auto-discuss failed. " + error.message } });
+    } finally {
+      setIsAutoMode(false);
+      setIsTyping(false);
+    }
+  };
+
+  const startAutoMode = (topic: string, mode: 'quick' | 'deep') => {
+    setIsAutoModalOpen(false);
+    handleAutoDiscuss(mode, topic);
+  };
+
   // Export functions
   const downloadFile = (content: string, filename: string, mimeType: string) => {
     const blob = new Blob([content], { type: mimeType });
@@ -452,9 +642,17 @@ export default function ConversationPage() {
                 className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm ${
                   msg.role === "user"
                     ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none"
-                    : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
+                    : msg.isSummary
+                      ? "bg-amber-50 border border-amber-200 text-slate-800 rounded-bl-none ring-4 ring-amber-50/50"
+                      : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
                 }`}
               >
+                {msg.isSummary && (
+                  <div className="mb-3 pb-2 border-b border-amber-200/50 flex items-center gap-2">
+                     <span className="text-xl">📝</span>
+                     <span className="font-bold text-amber-800 text-xs uppercase tracking-wider">Discussion Summary</span>
+                  </div>
+                )}
                 {msg.role === "agent" && (
                   <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
                     <AvatarDisplay
@@ -484,6 +682,11 @@ export default function ConversationPage() {
               </div>
             </div>
           ))
+        )}
+        {isThinking && (
+           <div className="flex justify-start animate-slide-up">
+              <ThinkingIndicator />
+           </div>
         )}
         <div ref={messagesEndRef} />
       </div>
@@ -602,25 +805,66 @@ export default function ConversationPage() {
 
               if (e.key === 'Enter' && !showMentionDropdown) {
                 handleSend();
+              } else {
+                setShowMentionDropdown(false);
               }
             }}
-            disabled={isTyping}
+            disabled={isTyping || isAutoMode}
           />
+
+          {/* Send Button */}
           <button
             onClick={handleSend}
-            disabled={!newMessage.trim() || isTyping}
+            disabled={!newMessage.trim() || isTyping || isAutoMode}
             className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center"
+            title="Send Message"
           >
              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
               <path d="M3.478 2.404a.75.75 0 0 0-.926.941l2.432 7.905H13.5a.75.75 0 0 1 0 1.5H4.984l-2.432 7.905a.75.75 0 0 0 .926.94 60.519 60.519 0 0 0 18.445-8.986.75.75 0 0 0 0-1.218A60.517 60.517 0 0 0 3.478 2.404Z" />
             </svg>
           </button>
+
+          {/* Auto Mode Button */}
+          <div className="relative">
+            <button
+               onClick={() => setIsAutoModalOpen(true)}
+               disabled={isTyping || isAutoMode}
+               className={`h-full px-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition-all flex items-center gap-2 font-medium ${isAutoMode ? "animate-pulse" : ""}`}
+               title="Start Auto Discussion"
+             >
+              {isAutoMode ? (
+                <>
+                  <svg className="animate-spin h-5 w-5 text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  </svg>
+                  <span>Discussing...</span>
+                </>
+              ) : (
+                <>
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                    <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
+                  </svg>
+                  <span>Auto</span>
+                </>
+              )}
+            </button>
+
+
+           </div>
           </div>
           <p className="text-center text-xs text-slate-400 mt-2">
             AI agents can make mistakes. Please verify important information.
           </p>
         </div>
       </div>
+
+      <AutoModeModal
+        isOpen={isAutoModalOpen}
+        onClose={() => setIsAutoModalOpen(false)}
+        onStart={startAutoMode}
+        initialTopic={newMessage}
+      />
     </div>
   );
 }

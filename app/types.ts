@@ -22,6 +22,7 @@ export type Message = {
     completion: number;
     total: number;
   };
+  isSummary?: boolean;
 };
 
 export type Conversation = {
