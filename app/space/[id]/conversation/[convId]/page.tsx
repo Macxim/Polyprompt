@@ -353,10 +353,20 @@ export default function ConversationPage() {
       });
 
       if (!planRes.ok) throw new Error("Failed to plan discussion");
-      const { plan } = await planRes.json();
+      const { plan: generatedPlan } = await planRes.json();
 
-      if (!plan || plan.length === 0) {
+      if (!generatedPlan || generatedPlan.length === 0) {
         throw new Error("No plan generated");
+      }
+
+      // Client-side fix: Ensure only one summary step exists (the last one)
+      const discussionSteps = generatedPlan.filter((s: any) => s.type !== 'summary');
+      const summarySteps = generatedPlan.filter((s: any) => s.type === 'summary');
+
+      const plan = [...discussionSteps];
+      // Append only the last summary found (if any)
+      if (summarySteps.length > 0) {
+        plan.push(summarySteps[summarySteps.length - 1]);
       }
 
       dispatch({ type: "SET_BANNER", payload: { message: `Auto-discussion started: ${plan.length} turns planned.` } });

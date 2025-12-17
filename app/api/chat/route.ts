@@ -20,7 +20,8 @@ export async function POST(req: Request) {
     const openaiMessages = [
       {
         role: "system" as const,
-        content: (agent.persona || "You are a helpful AI assistant.") + " Be concise. Do not ramble. Use direct answers.",
+        content: (agent.persona || "You are a helpful AI assistant.") + " Be helpful and engaging. Provide clear answers, avoiding unnecessary brevity but also avoiding rambling.",
+
       },
       // Include previous conversation history
       ...(conversationHistory || []).map((msg: any) => ({

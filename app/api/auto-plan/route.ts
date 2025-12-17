@@ -40,7 +40,7 @@ Plan a discussion with the following structure:
 
 For "quick" mode, plan roughly ${rounds * agents.length} turns plus a final synthesis.
 For "deep" mode, allow for back-and-forth debate.
-The FINAL step MUST have "type": "summary".
+The FINAL step MUST have "type": "summary". Do NOT include any other "summary" steps.
 
 Return ONLY the JSON array of steps. No markdown formatting.
 Example format:
