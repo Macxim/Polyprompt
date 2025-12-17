@@ -27,10 +27,22 @@ export type Message = {
   isSummary?: boolean;
 };
 
+export type ConversationTemplate = {
+  id: string;
+  name: string;
+  description: string;
+  category: 'decision-making' | 'creative' | 'technical' | 'research';
+  selectedAgents: string[]; // IDs of default agents
+  autoModeEnabled: boolean;
+  startingPrompt?: string; // Optional guided question
+  icon: string;
+};
+
 export type Conversation = {
   id: string;
   title: string;
   messages: Message[];
+  participantIds?: string[];
 };
 
 export type Space = {

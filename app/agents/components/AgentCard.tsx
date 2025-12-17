@@ -29,7 +29,7 @@ export default function AgentCard({ agent, onDuplicate, onToggleVisibility }: Pr
        {/* Decorative Gradient Background */}
        <div className={`absolute top-0 right-0 w-32 h-32 rounded-bl-full -mr-8 -mt-8 transition-transform group-hover:scale-110 ${agent.isDefault ? "bg-amber-50/50" : "bg-indigo-50/50"}`}></div>
 
-       {agent.isDefault && (
+       {agent.isDefault && !agent.isHidden && (
          <div className="absolute top-4 right-4 z-20">
             <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
               Default
@@ -48,7 +48,7 @@ export default function AgentCard({ agent, onDuplicate, onToggleVisibility }: Pr
        <div className="relative z-10 flex flex-col h-full">
         <div className="flex items-start justify-between mb-4">
           <div className="flex items-center gap-3">
-             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-lg ${agent.isDefault ? "bg-gradient-to-br from-amber-400 to-orange-500 shadow-orange-200" : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"}`}>
+             <div className={`w-12 h-12 rounded-xl flex items-center justify-center text-white text-xl shadow-lg ${agent.isDefault ? "bg-gradient-to-br from-amber-200 to-amber-300 shadow-orange-100" : "bg-gradient-to-br from-indigo-500 to-purple-600 shadow-indigo-200"}`}>
                {agent.avatar && agent.avatar.length <= 2 ? agent.avatar : (agent.name[0]?.toUpperCase() || "A")}
              </div>
              <div>

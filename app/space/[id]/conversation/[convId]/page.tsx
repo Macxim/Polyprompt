@@ -13,6 +13,9 @@ export default function ConversationPage() {
   const { state, dispatch } = useApp();
   const params = useParams();
   const router = useRouter();
+  const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
+  const autoModeTrigger = searchParams.get('auto');
+
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
   const [showMentionDropdown, setShowMentionDropdown] = useState(false);
@@ -50,6 +53,21 @@ export default function ConversationPage() {
   useEffect(() => {
     scrollToBottom();
   }, [conversation?.messages, isTyping]);
+
+  // Handle Auto Mode Trigger from URL
+  useEffect(() => {
+    if (autoModeTrigger === 'true' && !isAutoMode && conversation && conversation.messages.length > 0) {
+      // If we have a starting prompt (first user message), treat it as the topic
+      const lastUserMsg = [...conversation.messages].reverse().find(m => m.role === 'user');
+      if (lastUserMsg) {
+         // Clear the query param to prevent re-triggering?
+         // Actually better to just check if we haven't started yet.
+         // We trigger "Deep Dive" by default for important templates, or maybe "Quick Debate"?
+         // Let's default to "deep" for comprehensive templates.
+         handleAutoDiscuss('deep', lastUserMsg.content);
+      }
+    }
+  }, [autoModeTrigger, conversation?.messages]);
 
   if (!space || !conversation) return <p className="p-8 text-center text-slate-500">Conversation not found.</p>;
 
@@ -113,7 +131,11 @@ export default function ConversationPage() {
     setNewMessage("");
     setIsTyping(true);
 
-    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    // Filter agents based on conversation participants if defined, otherwise use all space agents
+    const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    const spaceAgents = conversation.participantIds
+      ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
+      : allSpaceAgents;
 
     if (spaceAgents.length === 0) {
       setIsTyping(false);
@@ -281,7 +303,10 @@ export default function ConversationPage() {
       return;
     }
 
-    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    const spaceAgents = conversation.participantIds
+      ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
+      : allSpaceAgents;
     if (spaceAgents.length < 2) {
        dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode requires at least 2 agents in the space." } });
        return;
@@ -454,7 +479,10 @@ export default function ConversationPage() {
   };
 
   const exportAsMarkdown = () => {
-    const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+    const spaceAgents = conversation.participantIds
+      ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
+      : allSpaceAgents;
     let content = `# ${conversation.title}\n\n`;
     content += `*Exported on ${new Date().toLocaleString()}*\n\n`;
     content += `---\n\n`;
@@ -547,7 +575,7 @@ export default function ConversationPage() {
                className="text-lg font-bold text-slate-800 leading-tight bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none transition-colors w-full sm:w-auto"
              />
               <div className="flex items-center gap-3 text-xs">
-                <p className="text-slate-500 font-medium">{spaceAgentsCount(state, space)} Agents active</p>
+                <p className="text-slate-500 font-medium">{spaceAgentsCount(state, space, conversation)} Agents active</p>
                 {totalTokens > 0 && (
                   <>
                     <span className="text-slate-300">•</span>
@@ -696,7 +724,10 @@ export default function ConversationPage() {
         <div className="max-w-4xl mx-auto relative">
           {/* Autocomplete Dropdown */}
           {showMentionDropdown && (() => {
-            const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+            const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+            const spaceAgents = conversation.participantIds
+              ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
+              : allSpaceAgents;
             const filteredAgents = spaceAgents.filter(agent =>
               agent.name.toLowerCase().includes(mentionSearch.toLowerCase())
             );
@@ -773,7 +804,10 @@ export default function ConversationPage() {
             className="flex-1 bg-slate-50 border-none rounded-xl px-4 py-3.5 focus:ring-2 focus:ring-indigo-500 focus:border-transparent text-slate-800 placeholder:text-slate-400 font-medium transition-all shadow-inner outline-none"
             onKeyDown={(e) => {
               if (showMentionDropdown) {
-                const spaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+                const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
+                const spaceAgents = conversation.participantIds
+                  ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
+                  : allSpaceAgents;
                 const filteredAgents = spaceAgents.filter(agent =>
                   agent.name.toLowerCase().includes(mentionSearch.toLowerCase())
                 );
@@ -870,6 +904,10 @@ export default function ConversationPage() {
 }
 
 // Helper to count agents
-function spaceAgentsCount(state: any, space: any) {
-  return state.agents.filter((a: any) => (space.agentIds || []).includes(a.id)).length;
+function spaceAgentsCount(state: any, space: any, conversation: any) {
+  const allSpaceAgents = state.agents.filter((a: any) => (space.agentIds || []).includes(a.id));
+  if (conversation.participantIds) {
+    return allSpaceAgents.filter((a: any) => conversation.participantIds.includes(a.id)).length;
+  }
+  return allSpaceAgents.length;
 }
