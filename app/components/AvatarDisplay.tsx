@@ -34,7 +34,7 @@ const generateGradient = (name: string): string => {
 };
 
 const sizeClasses = {
-  sm: "w-5 h-5 text-[10px]",
+  sm: "w-6 h-6 text-[8px]",
   md: "w-8 h-8 text-sm",
   lg: "w-10 h-10 text-base",
   xl: "w-16 h-16 text-2xl",

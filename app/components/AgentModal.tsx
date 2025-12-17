@@ -106,18 +106,23 @@ export default function AgentModal({ onAgentCreated }: Props) {
   if (!state.ui.isAgentModalOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-xl w-full max-w-md shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
-        <h2 className="text-2xl font-bold text-slate-800 mb-4">
+    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
+      <div className="bg-white p-8 rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+        <h2 className="text-2xl font-bold text-slate-900 mb-6">
           {activeAgent ? "Edit Agent" : "Create New Agent"}
         </h2>
 
-        <div className="space-y-4">
-          {/* Avatar Preview & Selection */}
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-3">
-              Avatar
-            </label>
+        <div className="space-y-8">
+          {/* Identity Section */}
+          <section className="space-y-6">
+            <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Identity</h3>
+
+            {/* Avatar Preview & Selection */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                Avatar
+              </label>
+            </div>
             <div className="flex items-center gap-4 mb-3">
               <AvatarDisplay
                 agent={{ id: "preview", name: name || "Agent", avatar }}
@@ -201,7 +206,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
                 <p className="text-xs text-slate-500 mt-1">Enter a URL to an image</p>
               </div>
             )}
-          </div>
+          </section>
           <div>
             <label className="block text-sm font-medium text-slate-700 mb-2">
               Name
@@ -241,123 +246,128 @@ export default function AgentModal({ onAgentCreated }: Props) {
             )}
           </div>
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              AI Model
-            </label>
-            <select
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
-              value={model}
-              onChange={(e) => setModel(e.target.value as "gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo")}
-            >
-              <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap) ⚡</option>
-              <option value="gpt-4o">GPT-4o (Most Capable) 🚀</option>
-              <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy) 💰</option>
-            </select>
-            <p className="text-xs text-slate-500 mt-1">
-              {model === "gpt-4o-mini" && "Best balance of speed and quality. ~$0.15 per 1M tokens."}
-              {model === "gpt-4o" && "Most advanced model. ~$2.50 per 1M tokens."}
-              {model === "gpt-3.5-turbo" && "Older model, cheapest option. ~$0.50 per 1M tokens."}
-            </p>
-          </div>
+          {/* Behavior Section */}
+          <section className="space-y-6 pt-4 border-t border-slate-100">
+             <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Behavior</h3>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                AI Model
+              </label>
+              <select
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all bg-white"
+                value={model}
+                onChange={(e) => setModel(e.target.value as "gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo")}
+              >
+                <option value="gpt-4o-mini">GPT-4o Mini (Fast & Cheap) ⚡</option>
+                <option value="gpt-4o">GPT-4o (Most Capable) 🚀</option>
+                <option value="gpt-3.5-turbo">GPT-3.5 Turbo (Legacy) 💰</option>
+              </select>
+              <p className="text-xs text-slate-500 mt-1">
+                {model === "gpt-4o-mini" && "Best balance of speed and quality. ~$0.15 per 1M tokens."}
+                {model === "gpt-4o" && "Most advanced model. ~$2.50 per 1M tokens."}
+                {model === "gpt-3.5-turbo" && "Older model, cheapest option. ~$0.50 per 1M tokens."}
+              </p>
+            </div>
 
 
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Temperature: {temperature.toFixed(1)}
-              <span className="ml-2 text-xs font-normal text-slate-500">
-                {temperature < 0.3 && "🎯 Focused & Deterministic"}
-                {temperature >= 0.3 && temperature < 0.7 && "⚖️ Balanced"}
-                {temperature >= 0.7 && "🎨 Creative & Varied"}
-              </span>
-            </label>
-            <div className="relative">
-              <input
-                type="range"
-                min="0"
-                max="1"
-                step="0.1"
-                value={temperature}
-                onChange={(e) => setTemperature(parseFloat(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
-                style={{
-                  background: `linear-gradient(to right,
-                    rgba(59, 130, 246, 0.3) 0%,
-                    rgba(99, 102, 241, 0.3) ${temperature * 50}%,
-                    rgba(168, 85, 247, 0.3) ${temperature * 100}%,
-                    rgba(236, 72, 153, 0.3) 100%)`,
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Temperature: {temperature.toFixed(1)}
+                <span className="ml-2 text-xs font-normal text-slate-500">
+                  {temperature < 0.3 && "🎯 Focused & Deterministic"}
+                  {temperature >= 0.3 && temperature < 0.7 && "⚖️ Balanced"}
+                  {temperature >= 0.7 && "🎨 Creative & Varied"}
+                </span>
+              </label>
+              <div className="relative">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.1"
+                  value={temperature}
+                  onChange={(e) => setTemperature(parseFloat(e.target.value))}
+                  className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                  style={{
+                    background: `linear-gradient(to right,
+                      rgba(59, 130, 246, 0.3) 0%,
+                      rgba(99, 102, 241, 0.3) ${temperature * 50}%,
+                      rgba(168, 85, 247, 0.3) ${temperature * 100}%,
+                      rgba(236, 72, 153, 0.3) 100%)`,
+                  }}
+                />
+                <style jsx>{`
+                  input[type="range"]::-webkit-slider-thumb {
+                    appearance: none;
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: white;
+                    border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    cursor: pointer;
+                    transition: all 0.2s;
+                  }
+                  input[type="range"]::-webkit-slider-thumb:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+                  }
+                  input[type="range"]::-moz-range-thumb {
+                    width: 18px;
+                    height: 18px;
+                    border-radius: 50%;
+                    background: white;
+                    border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
+                    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+                    cursor: pointer;
+                    transition: all 0.2s;
+                  }
+                  input[type="range"]::-moz-range-thumb:hover {
+                    transform: scale(1.1);
+                    box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
+                  }
+                `}</style>
+              </div>
+              <div className="flex justify-between text-xs text-slate-400 mt-1">
+                <span>0.0 (Precise)</span>
+                <span>0.5 (Moderate)</span>
+                <span>1.0 (Creative)</span>
+              </div>
+              <p className="text-xs text-slate-500 mt-2">
+                {temperature < 0.3 && "Low temperature produces consistent, focused responses. Best for factual tasks."}
+                {temperature >= 0.3 && temperature < 0.7 && "Balanced temperature for general-purpose conversations."}
+                {temperature >= 0.7 && "High temperature produces more creative and varied responses. Best for brainstorming."}
+              </p>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Description
+              </label>
+              <textarea
+                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
+                rows={3}
+                placeholder="Optional description..."
+                value={description}
+                onChange={(e) => {
+                  setDescription(e.target.value);
+                  if (descriptionError) setDescriptionError("");
                 }}
+                maxLength={200}
               />
-              <style jsx>{`
-                input[type="range"]::-webkit-slider-thumb {
-                  appearance: none;
-                  width: 18px;
-                  height: 18px;
-                  border-radius: 50%;
-                  background: white;
-                  border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
-                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                  cursor: pointer;
-                  transition: all 0.2s;
-                }
-                input[type="range"]::-webkit-slider-thumb:hover {
-                  transform: scale(1.1);
-                  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-                }
-                input[type="range"]::-moz-range-thumb {
-                  width: 18px;
-                  height: 18px;
-                  border-radius: 50%;
-                  background: white;
-                  border: 2px solid ${temperature < 0.3 ? 'rgba(59, 130, 246, 0.6)' : temperature < 0.7 ? 'rgba(99, 102, 241, 0.6)' : 'rgba(168, 85, 247, 0.6)'};
-                  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-                  cursor: pointer;
-                  transition: all 0.2s;
-                }
-                input[type="range"]::-moz-range-thumb:hover {
-                  transform: scale(1.1);
-                  box-shadow: 0 3px 6px rgba(0, 0, 0, 0.15);
-                }
-              `}</style>
-            </div>
-            <div className="flex justify-between text-xs text-slate-400 mt-1">
-              <span>0.0 (Precise)</span>
-              <span>0.5 (Moderate)</span>
-              <span>1.0 (Creative)</span>
-            </div>
-            <p className="text-xs text-slate-500 mt-2">
-              {temperature < 0.3 && "Low temperature produces consistent, focused responses. Best for factual tasks."}
-              {temperature >= 0.3 && temperature < 0.7 && "Balanced temperature for general-purpose conversations."}
-              {temperature >= 0.7 && "High temperature produces more creative and varied responses. Best for brainstorming."}
-            </p>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-slate-700 mb-2">
-              Description
-            </label>
-            <textarea
-              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
-              rows={3}
-              placeholder="Optional description..."
-              value={description}
-              onChange={(e) => {
-                setDescription(e.target.value);
-                if (descriptionError) setDescriptionError("");
-              }}
-              maxLength={200}
-            />
-            <div className="flex justify-between items-center mt-1">
-              {descriptionError ? (
-                <p className="text-red-600 text-sm">{descriptionError}</p>
-              ) : (
-                <div></div>
-              )}
-              <div className="text-xs text-slate-400">
-                {description.length}/200
+              <div className="flex justify-between items-center mt-1">
+                {descriptionError ? (
+                  <p className="text-red-600 text-sm">{descriptionError}</p>
+                ) : (
+                  <div></div>
+                )}
+                <div className="text-xs text-slate-400">
+                  {description.length}/200
+                </div>
               </div>
             </div>
-          </div>
+          </section>
         </div>
 
         <div className="flex justify-end gap-3 mt-6">
