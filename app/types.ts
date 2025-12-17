@@ -45,6 +45,11 @@ export type Conversation = {
   participantIds?: string[];
 };
 
+export type SharedConversation = Conversation & {
+  shareId: string;
+  sharedAt: number;
+};
+
 export type Space = {
   id: string;
   name: string;

@@ -33,7 +33,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         dispatch({ type: "HYDRATE_APP", payload: parsedState });
       } catch (err) {
         console.error("Failed to parse saved app state", err);
+        // If parsing fails, treat as empty session
+        dispatch({ type: "HYDRATE_APP", payload: initialAppState });
       }
+    } else {
+      // No saved state found (first visit or cleared cache)
+      // We must mark as hydrated so future changes are saved
+      dispatch({ type: "HYDRATE_APP", payload: initialAppState });
     }
   }, []);
 

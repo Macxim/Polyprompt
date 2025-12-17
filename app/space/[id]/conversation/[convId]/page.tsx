@@ -24,7 +24,9 @@ export default function ConversationPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [isSharing, setIsSharing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -60,10 +62,10 @@ export default function ConversationPage() {
       // If we have a starting prompt (first user message), treat it as the topic
       const lastUserMsg = [...conversation.messages].reverse().find(m => m.role === 'user');
       if (lastUserMsg) {
-         // Clear the query param to prevent re-triggering?
-         // Actually better to just check if we haven't started yet.
-         // We trigger "Deep Dive" by default for important templates, or maybe "Quick Debate"?
-         // Let's default to "deep" for comprehensive templates.
+         // Prevent re-triggering if we just stopped or are typing
+         if (isTyping || isAutoMode) return;
+
+         // Trigger immediately
          handleAutoDiscuss('deep', lastUserMsg.content);
       }
     }
@@ -314,6 +316,7 @@ export default function ConversationPage() {
 
     setIsAutoMode(true);
     setIsTyping(true);
+    stopRef.current = false;
 
     try {
       // 1. Send User Prompt
@@ -364,7 +367,15 @@ export default function ConversationPage() {
       // So let's build a local `history` array starting with current messages + new user message
       let history = [...conversation.messages, userMessage];
 
-      for (const step of plan) {
+      // Safety Limit: Max 20 turns
+      const SAFE_PLAN = (plan?.length || 0) > 20 ? plan.slice(0, 20) : plan;
+
+      for (const step of SAFE_PLAN) {
+        if (stopRef.current) {
+             dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode stopped by user." } });
+             break;
+        }
+
         const agent = spaceAgents.find(a => a.id === step.agentId) || spaceAgents[0]; // Fallback if ID mismatch
 
         // UI Scroll
@@ -537,6 +548,33 @@ export default function ConversationPage() {
     setShowExportMenu(false);
   };
 
+  const handleShare = async () => {
+    if (isSharing) return;
+    setIsSharing(true);
+    dispatch({ type: "SET_BANNER", payload: { message: "Generating public link..." } });
+
+    try {
+        const res = await fetch("/api/share", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ conversation }),
+        });
+
+        if (!res.ok) throw new Error("Share failed");
+
+        const { shareId } = await res.json();
+        const url = `${window.location.origin}/share/${shareId}`;
+
+        await navigator.clipboard.writeText(url);
+        dispatch({ type: "SET_BANNER", payload: { message: "Link copied to clipboard!" } });
+    } catch (e: any) {
+        console.error("Share error", e);
+        dispatch({ type: "SET_BANNER", payload: { message: "Failed to share: " + (e.message || "Unknown error") } });
+    } finally {
+        setIsSharing(false);
+    }
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-50/50">
       {/* Header */}
@@ -589,6 +627,24 @@ export default function ConversationPage() {
         </div>
 
         <div className="flex items-center gap-2">
+           {/* Share Button */}
+           <button
+             onClick={handleShare}
+             disabled={isSharing}
+             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
+             title="Share Public Link"
+           >
+              {isSharing ? (
+                <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                   <path fillRule="evenodd" d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z" clipRule="evenodd" />
+                </svg>
+              )}
+           </button>
           {/* Export Dropdown */}
           <div className="relative">
             <button
@@ -769,15 +825,17 @@ export default function ConversationPage() {
 
           <div className="flex gap-3 items-end">
           <textarea
-            ref={inputRef as any}
+            ref={inputRef}
             value={newMessage}
             onChange={(e) => {
               const value = e.target.value;
               setNewMessage(value);
 
               // Auto-resize
-              e.target.style.height = 'auto';
-              e.target.style.height = Math.min(e.target.scrollHeight, 150) + 'px';
+              if (inputRef.current) {
+                  inputRef.current.style.height = 'auto';
+                  inputRef.current.style.height = Math.min(inputRef.current.scrollHeight, 150) + 'px';
+              }
 
               // Detect @ mentions
               const cursorPos = e.target.selectionStart || 0;
@@ -824,10 +882,10 @@ export default function ConversationPage() {
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault();
                   setSelectedMentionIndex((prev) => prev > 0 ? prev - 1 : 0);
-                } else if (e.key === 'Enter' && filteredAgents.length > 0) {
+                 } else if (e.key === 'Enter' && filteredAgents.length > 0) {
                   e.preventDefault();
                   const selectedAgent = filteredAgents[selectedMentionIndex];
-                  const cursorPos = (inputRef.current as any)?.selectionStart || 0;
+                  const cursorPos = inputRef.current?.selectionStart || 0;
                   const textBeforeCursor = newMessage.slice(0, cursorPos);
                   const lastAtIndex = textBeforeCursor.lastIndexOf('@');
                   const textAfterCursor = newMessage.slice(cursorPos);
@@ -845,8 +903,8 @@ export default function ConversationPage() {
                 e.preventDefault();
                 handleSend();
                 // Reset height
-                if (e.currentTarget) {
-                    e.currentTarget.style.height = 'auto';
+                if (inputRef.current) {
+                    inputRef.current.style.height = 'auto';
                 }
               } else if (e.key === 'Enter' && showMentionDropdown) {
                   // Handled above
@@ -863,7 +921,7 @@ export default function ConversationPage() {
           <button
             onClick={handleSend}
             disabled={!newMessage.trim() || isTyping || isAutoMode}
-            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center"
+            className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed text-white px-5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center py-2"
             title="Send Message"
           >
              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -874,18 +932,26 @@ export default function ConversationPage() {
           {/* Auto Mode Button */}
           <div className="relative">
             <button
-               onClick={() => setIsAutoModalOpen(true)}
-               disabled={isTyping || isAutoMode}
-               className={`h-full px-4 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition-all flex items-center gap-2 font-medium ${isAutoMode ? "animate-pulse" : ""}`}
-               title="Start Auto Discussion"
+               onClick={() => {
+                   if (isAutoMode) {
+                       stopRef.current = true;
+                       // We can't immediately set isAutoMode(false) because the loop needs to break first?
+                       // Actually we can, but let's let the loop handle the cleanup or do it here.
+                       // For safety, let's force it eventually if loop hangs?
+                   } else {
+                       setIsAutoModalOpen(true);
+                   }
+               }}
+               disabled={isTyping && !isAutoMode}
+               className={`h-full min-w-[100px] px-4 py-1.5 rounded-xl border border-indigo-200 bg-indigo-50 text-indigo-700 hover:bg-indigo-100 disabled:opacity-50 transition-all flex items-center justify-center gap-2 font-medium ${isAutoMode ? "animate-pulse" : ""}`}
+               title={isAutoMode ? "Stop Auto Mode" : "Start Auto Discussion"}
              >
               {isAutoMode ? (
                 <>
-                  <svg className="animate-spin h-5 w-5 text-indigo-700" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                  <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                    <path fillRule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clipRule="evenodd" />
                   </svg>
-                  <span>Discussing...</span>
+                  <span className="text-red-600">Stop</span>
                 </>
               ) : (
                 <>
