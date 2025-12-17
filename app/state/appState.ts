@@ -1,4 +1,5 @@
 import { Agent, Space } from "../types";
+import { DEFAULT_AGENTS } from "../data/defaultAgents";
 
 export type AppState = {
   agents: Agent[];
@@ -16,7 +17,7 @@ export type AppState = {
 };
 
 export const initialAppState: AppState = {
-  agents: [],
+  agents: DEFAULT_AGENTS,
   spaces: [],
   activeSpaceId: null,
   activeAgentId: null,

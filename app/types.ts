@@ -7,6 +7,8 @@ export type Agent = {
   model?: "gpt-4o" | "gpt-4o-mini" | "gpt-3.5-turbo";
   temperature?: number; // 0-1, default 0.7
   avatar?: string | null; // Image URL, emoji, or null for auto-generated
+  isDefault?: boolean;
+  isHidden?: boolean;
 };
 
 export type Message = {

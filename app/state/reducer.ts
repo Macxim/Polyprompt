@@ -47,11 +47,36 @@ export const reducer = (state: AppState, action: Action): AppState => {
     //  SPACES
     // ────────────────────────────────
     //
-    case "ADD_SPACE":
+    case "ADD_SPACE": {
+      let newSpace = action.payload;
+
+      // Phase 2: Auto-populate for New Users
+      // If this is the first space being created, add the core default agents
+      if (state.spaces.length === 0) {
+        const coreAgentIds = [
+          "strategic_analyst",
+          "devils_advocate",
+          "creative_ideator",
+          "practical_realist",
+          "research_synthesizer",
+        ];
+
+        // Ensure we only add agents that actually exist in the state
+        const validAgentIds = coreAgentIds.filter(id =>
+          state.agents.some(a => a.id === id)
+        );
+
+        newSpace = {
+          ...newSpace,
+          agentIds: [...(newSpace.agentIds || []), ...validAgentIds],
+        };
+      }
+
       return {
         ...state,
-        spaces: [...state.spaces, action.payload],
+        spaces: [...state.spaces, newSpace],
       };
+    }
 
     case "UPDATE_SPACE":
       return {
