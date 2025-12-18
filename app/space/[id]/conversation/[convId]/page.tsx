@@ -14,7 +14,6 @@ export default function ConversationPage() {
   const params = useParams();
   const router = useRouter();
   const searchParams = new URLSearchParams(typeof window !== 'undefined' ? window.location.search : '');
-  const autoModeTrigger = searchParams.get('auto');
 
   const [newMessage, setNewMessage] = useState("");
   const [isTyping, setIsTyping] = useState(false);
@@ -24,11 +23,14 @@ export default function ConversationPage() {
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
+  const [isAutoPrimed, setIsAutoPrimed] = useState(false);
+  const [autoModeType, setAutoModeType] = useState<'quick' | 'deep'>('deep');
   const [isSharing, setIsSharing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
   const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+  const abortControllerRef = useRef<AbortController | null>(null);
 
   // Validate params
   if (
@@ -56,20 +58,30 @@ export default function ConversationPage() {
     scrollToBottom();
   }, [conversation?.messages, isTyping]);
 
-  // Handle Auto Mode Trigger from URL
+  // Handle pre-filled prompt and auto-prime from template
   useEffect(() => {
-    if (autoModeTrigger === 'true' && !isAutoMode && conversation && conversation.messages.length > 0) {
-      // If we have a starting prompt (first user message), treat it as the topic
-      const lastUserMsg = [...conversation.messages].reverse().find(m => m.role === 'user');
-      if (lastUserMsg) {
-         // Prevent re-triggering if we just stopped or are typing
-         if (isTyping || isAutoMode) return;
+    const prompt = searchParams.get('prompt');
+    const auto = searchParams.get('auto');
 
-         // Trigger immediately
-         handleAutoDiscuss('deep', lastUserMsg.content);
-      }
+    if (prompt) {
+      setNewMessage(prompt);
     }
-  }, [autoModeTrigger, conversation?.messages]);
+
+    if (auto === 'true') {
+      setIsAutoPrimed(true);
+    }
+
+    if (prompt || auto === 'true') {
+      // Clean URL parameters
+      const params = new URLSearchParams(window.location.search);
+      params.delete('prompt');
+      params.delete('auto');
+      const queryString = params.toString();
+      const newUrl = window.location.pathname + (queryString ? `?${queryString}` : '');
+      window.history.replaceState({}, '', newUrl);
+    }
+  }, []);
+
 
   if (!space || !conversation) return <p className="p-8 text-center text-slate-500">Conversation not found.</p>;
 
@@ -114,12 +126,19 @@ export default function ConversationPage() {
 
   // Handle sending a new message
   const handleSend = async () => {
-    if (!newMessage.trim()) return;
+    const messageContent = newMessage.trim();
+    if (!messageContent) return;
+
+    setNewMessage(""); // Clear immediately for better UX
+    // Reset height
+    if (inputRef.current) {
+        inputRef.current.style.height = 'auto';
+    }
 
     const userMessage: Message = {
       id: Date.now().toString(36) + Math.random().toString(36).substr(2),
       role: "user",
-      content: newMessage,
+      content: messageContent,
       agentName: "User",
       timestamp: Date.now(),
     };
@@ -130,16 +149,36 @@ export default function ConversationPage() {
       payload: { spaceId, conversationId: convId, message: userMessage },
     });
 
-    setNewMessage("");
-    setIsTyping(true);
-
-    // Filter agents based on conversation participants if defined, otherwise use all space agents
+    // 2. Identify agents to invoke
     const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
     const spaceAgents = conversation.participantIds
       ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
       : allSpaceAgents;
 
-    if (spaceAgents.length === 0) {
+    // Filter agents: if mentions exist (case-insensitive check for @Name), only invoke those; otherwise invoke all participants
+    // We sort by name length descending to ensure @Technical Expert matches before @Technical
+    const agentsToInvokeByMention = allSpaceAgents
+      .sort((a, b) => b.name.length - a.name.length)
+      .filter(agent => messageContent.toLowerCase().includes(`@${agent.name.toLowerCase()}`));
+
+    const hasMentions = agentsToInvokeByMention.length > 0;
+
+    // If auto-mode is primed, initiate auto-discussion instead of normal message
+    // BUT only if no specific agents are mentioned
+    if (isAutoPrimed && !isAutoMode && !hasMentions) {
+      setIsAutoPrimed(false);
+      handleAutoDiscuss(autoModeType, messageContent, false);
+      return;
+    }
+
+    // If we have mentions but were primed, clear the prime state as the user is taking manual control
+    if (isAutoPrimed && hasMentions) {
+       setIsAutoPrimed(false);
+    }
+
+    setIsTyping(true);
+
+    if (allSpaceAgents.length === 0) {
       setIsTyping(false);
       dispatch({
         type: "SET_BANNER",
@@ -148,16 +187,9 @@ export default function ConversationPage() {
       return;
     }
 
-    // Parse @mentions from the message
-    const mentionMatches = newMessage.match(/@(\w+)/g);
-    const mentionedNames = mentionMatches?.map(m => m.slice(1).toLowerCase()) || [];
+    const agentsToInvoke = hasMentions ? agentsToInvokeByMention : spaceAgents;
 
-    // Filter agents: if mentions exist, only invoke mentioned agents; otherwise invoke all
-    const agentsToInvoke = mentionedNames.length > 0
-      ? spaceAgents.filter(agent => mentionedNames.includes(agent.name.toLowerCase()))
-      : spaceAgents;
-
-    if (agentsToInvoke.length === 0 && mentionedNames.length > 0) {
+    if (agentsToInvoke.length === 0 && hasMentions) {
       setIsTyping(false);
       dispatch({
         type: "SET_BANNER",
@@ -297,7 +329,7 @@ export default function ConversationPage() {
     // So we will maintain a `currentHistory` array within the `handleAutoDiscuss` function.
   };
 
-  const handleAutoDiscuss = async (mode: 'quick' | 'deep', explicitTopic?: string) => {
+  const handleAutoDiscuss = async (mode: 'quick' | 'deep', explicitTopic?: string, skipUserMessage = false) => {
     const topic = explicitTopic || newMessage.trim();
 
     if (!topic) {
@@ -319,20 +351,24 @@ export default function ConversationPage() {
     stopRef.current = false;
 
     try {
-      // 1. Send User Prompt
-      const userMessage: Message = {
-        id: Date.now().toString(36) + Math.random().toString(36).substr(2),
-        role: "user",
-        content: topic,
-        agentName: "User",
-        timestamp: Date.now(),
-      };
+      // 1. Send User Prompt (ONLY if not skipping)
+      let userMessageContent = topic;
 
-      dispatch({
-        type: "ADD_MESSAGE",
-        payload: { spaceId, conversationId: convId, message: userMessage },
-      });
-      setNewMessage("");
+      if (!skipUserMessage) {
+          const userMessage: Message = {
+            id: Date.now().toString(36) + Math.random().toString(36).substr(2),
+            role: "user",
+            content: topic,
+            agentName: "User",
+            timestamp: Date.now(),
+          };
+
+          dispatch({
+            type: "ADD_MESSAGE",
+            payload: { spaceId, conversationId: convId, message: userMessage },
+          });
+          setNewMessage("");
+      }
 
       // 2. Call Planner API
       // Create a temporary loading indicator
@@ -346,7 +382,7 @@ export default function ConversationPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          prompt: userMessage.content,
+          prompt: userMessageContent,
           agents: spaceAgents.map(a => ({ id: a.id, name: a.name, persona: a.persona })),
           mode
         }),
@@ -374,15 +410,31 @@ export default function ConversationPage() {
       // 3. Execute the Plan
       // We need to track history locally because react state won't update fast enough in this loop?
       // Actually, we can just re-read `conversation.messages` if we were using a ref, but `conversation` is a prop/derived state.
-      // So let's build a local `history` array starting with current messages + new user message
-      let history = [...conversation.messages, userMessage];
+      // So let's build a local `history` array starting with current messages
+      // If we skipped adding the user message, IT IS ALREADY IN conversation.messages (at the end).
+      // If we added it, `conversation.messages` MIGHT NOT have it yet (async update).
+      // Wait, if we use dispatch, it's async in React 18 batching.
+
+      // SAFE APPROACH: rebuilding history from what we know.
+      let history = [...conversation.messages];
+      if (!skipUserMessage) {
+          // If we just added it, we must append it manually to our local history copy
+          // Re-create the object since we can't access `userMessage` from the previous scope easily without refactoring
+          const userMsgObj: Message = {
+            id: "temp-id", // ID doesn't matter much for history context
+            role: "user",
+            content: topic,
+            agentName: "User",
+            timestamp: Date.now(),
+          };
+          history.push(userMsgObj);
+      }
 
       // Safety Limit: Max 20 turns
       const SAFE_PLAN = (plan?.length || 0) > 20 ? plan.slice(0, 20) : plan;
 
       for (const step of SAFE_PLAN) {
         if (stopRef.current) {
-             dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode stopped by user." } });
              break;
         }
 
@@ -412,74 +464,113 @@ export default function ConversationPage() {
         // Add to local history for next context
         const messageForHistory = { ...initialAgentMessage, content: "" }; // Will update content later
 
-        // Call Chat API with specific instruction
-        const res = await fetch("/api/chat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            messages: [{ role: "system", content: `Instruction for this turn: ${step.instruction}` }, ...history],
-            agent: {
-              name: agent.name,
-              persona: agent.persona,
-              model: agent.model || "gpt-4o-mini",
-              temperature: agent.temperature ?? 0.7,
-            },
-            conversationHistory: history, // We might need to handle this carefully if the API uses one vs the other
-          }),
-        });
+        // Create new abort controller for this request
+        const controller = new AbortController();
+        abortControllerRef.current = controller;
 
-        if (!res.ok || !res.body) throw new Error("Chat API failed");
+        try {
+          // Call Chat API with specific instruction
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            signal: controller.signal,
+            body: JSON.stringify({
+              messages: [{ role: "system", content: `Instruction for this turn: ${step.instruction}` }, ...history],
+              agent: {
+                name: agent.name,
+                persona: agent.persona,
+                model: agent.model || "gpt-4o-mini",
+                temperature: agent.temperature ?? 0.7,
+              },
+              conversationHistory: history,
+            }),
+          });
 
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder();
-        let streamedContent = "";
-        let tokenUsage = null;
+          if (!res.ok || !res.body) throw new Error("Chat API failed");
 
-        while (true) {
-          const { done, value } = await reader.read();
-          if (done) break;
-          const chunk = decoder.decode(value, { stream: true });
+          const reader = res.body.getReader();
+          const decoder = new TextDecoder();
+          let streamedContent = "";
+          let tokenUsage = null;
 
-          if (chunk.includes('__TOKENS__')) {
-            const parts = chunk.split('__TOKENS__');
-            streamedContent += parts[0];
-            try { tokenUsage = JSON.parse(parts[1]); } catch (e) {}
-          } else {
-            streamedContent += chunk;
+          while (true) {
+            // Check for stop signal mid-stream
+            if (stopRef.current) {
+              controller.abort();
+              break;
+            }
+
+            const { done, value } = await reader.read();
+            if (done) break;
+            const chunk = decoder.decode(value, { stream: true });
+
+            if (chunk.includes('__TOKENS__')) {
+              const parts = chunk.split('__TOKENS__');
+              streamedContent += parts[0];
+              try { tokenUsage = JSON.parse(parts[1]); } catch (e) {}
+            } else {
+              streamedContent += chunk;
+            }
+
+            dispatch({
+              type: "UPDATE_MESSAGE",
+              payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent },
+            });
           }
 
+          // Finalize message
           dispatch({
             type: "UPDATE_MESSAGE",
-            payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent },
+            payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent, tokens: tokenUsage },
           });
+
+          // Update local history for next iteration
+          messageForHistory.content = streamedContent;
+          history.push(messageForHistory);
+
+        } catch (err: any) {
+           if (err.name === 'AbortError' || stopRef.current) {
+             // User stopped manually, just break loop
+             // Finalize partial message
+             dispatch({
+               type: "UPDATE_MESSAGE",
+               payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: messageForHistory.content },
+             });
+             break;
+           }
+           throw err;
+        } finally {
+           abortControllerRef.current = null;
         }
-
-        // Finalize message
-        dispatch({
-          type: "UPDATE_MESSAGE",
-          payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent, tokens: tokenUsage },
-        });
-
-        // Update local history for next iteration
-        messageForHistory.content = streamedContent;
-        history.push(messageForHistory);
 
         // Small delay between turns
         if (!step.type || step.type !== 'summary') {
            setIsThinking(true);
-           await new Promise(resolve => setTimeout(resolve, 800));
+           // Wait, but check stopRef regularly
+           for (let i=0; i<8; i++) {
+             if (stopRef.current) break;
+             await new Promise(resolve => setTimeout(resolve, 100));
+           }
            setIsThinking(false);
         }
       }
 
-      dispatch({ type: "SET_BANNER", payload: { message: "Auto-discussion complete." } });
+      const endMsg = stopRef.current ? "Auto-mode stopped by user." : "Auto-discussion complete.";
+      dispatch({ type: "SET_BANNER", payload: { message: endMsg } });
 
     } catch (error: any) {
-      console.error("Auto-discuss error:", error);
-      dispatch({ type: "SET_BANNER", payload: { message: "Auto-discuss failed. " + error.message } });
+      if (error.name !== 'AbortError') {
+        console.error("Auto-discuss error:", error);
+        dispatch({ type: "SET_BANNER", payload: { message: "Auto-discuss failed. " + error.message } });
+      }
     } finally {
       setIsAutoMode(false);
       setIsTyping(false);
+      stopRef.current = false;
+      if (abortControllerRef.current) {
+         abortControllerRef.current.abort();
+         abortControllerRef.current = null;
+      }
     }
   };
 
@@ -716,16 +807,58 @@ export default function ConversationPage() {
       </div>
 
       {/* Messages Area */}
-      <div className="flex-1 overflow-y-auto p-4 sm:p-6 space-y-6">
+      <div className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 ${conversation.messages.length === 0 ? 'flex flex-col items-center justify-center' : ''}`}>
         {conversation.messages.length === 0 ? (
-           <div className="h-full flex flex-col items-center justify-center opacity-50">
-              <div className="w-16 h-16 bg-slate-200 rounded-full flex items-center justify-center mb-4">
-                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-8 h-8 text-slate-400">
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
-                </svg>
+          <div className="max-w-md w-full glass-panel bg-white/40 border border-slate-200/60 rounded-3xl p-8 shadow-xl backdrop-blur-sm animate-in fade-in zoom-in duration-500">
+            <div className="mb-8">
+              <h3 className="text-lg font-bold text-slate-800 tracking-tight">How agent responses work:</h3>
+            </div>
+
+            <div className="space-y-6">
+              <div className="flex gap-4 group">
+                <div className="mt-1 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 "><path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd"></path></svg>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-800 text-[11px] mb-1 uppercase tracking-widest flex items-center gap-2">
+                    Auto-Mode ON
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                  </p>
+                  <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                    Agents discuss with each other
+                  </p>
+                </div>
               </div>
-              <p className="text-slate-500 font-medium">Start the conversation</p>
-           </div>
+
+              <div className="flex gap-4 group">
+                <div className="mt-1 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500">
+                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 "><path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd"></path></svg>
+                </div>
+                <div>
+                  <p className="font-bold text-slate-700 text-[11px] mb-1 uppercase tracking-widest">
+                    Auto-Mode OFF
+                  </p>
+                  <p className="text-slate-600 text-sm leading-relaxed font-medium">
+                    All active agents reply in sequence
+                  </p>
+                </div>
+              </div>
+
+              <div className="pt-6 border-t border-slate-200/50">
+                <div className="flex gap-4 group">
+                  <div className="mt-1 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg bg-indigo-50">
+                    💬
+                  </div>
+                  <div>
+                    <p className="font-bold text-slate-800 text-[13px] mb-1">Want specific agents only?</p>
+                    <p className="text-slate-600 text-sm leading-relaxed">
+                      Use <span className="px-1.5 py-0.5 bg-indigo-50 text-indigo-600 rounded-md font-bold text-[11px]">@mentions</span> in your message
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         ) : (
           conversation.messages.map((msg) => (
             <div
@@ -893,7 +1026,7 @@ export default function ConversationPage() {
                 } else if (e.key === 'ArrowUp') {
                   e.preventDefault();
                   setSelectedMentionIndex((prev) => prev > 0 ? prev - 1 : 0);
-                 } else if (e.key === 'Enter' && filteredAgents.length > 0) {
+                } else if ((e.key === 'Enter' || e.key === 'Tab') && filteredAgents.length > 0) {
                   e.preventDefault();
                   const selectedAgent = filteredAgents[selectedMentionIndex];
                   const cursorPos = inputRef.current?.selectionStart || 0;
@@ -903,6 +1036,15 @@ export default function ConversationPage() {
                   const newText = newMessage.slice(0, lastAtIndex) + `@${selectedAgent.name} ` + textAfterCursor;
                   setNewMessage(newText);
                   setShowMentionDropdown(false);
+
+                  // Keep focus and reset selection to end of inserted name
+                  setTimeout(() => {
+                    if (inputRef.current) {
+                      const newPos = lastAtIndex + selectedAgent.name.length + 2; // +1 for @, +1 for space
+                      inputRef.current.setSelectionRange(newPos, newPos);
+                      inputRef.current.focus();
+                    }
+                  }, 0);
                   return;
                 } else if (e.key === 'Escape') {
                   setShowMentionDropdown(false);
@@ -934,13 +1076,22 @@ export default function ConversationPage() {
                 onClick={() => {
                     if (isAutoMode) {
                         stopRef.current = true;
+                        if (abortControllerRef.current) abortControllerRef.current.abort();
+                    } else if (isAutoPrimed) {
+                        setIsAutoPrimed(false);
                     } else {
                         setIsAutoModalOpen(true);
                     }
                 }}
                 disabled={isTyping && !isAutoMode}
-                className={`p-2 rounded-full flex items-center justify-center gap-2 font-medium min-w-[100px] px-3 py-1.5 transition-all ${isAutoMode ? "animate-pulse text-red-600 bg-red-50 border border-red-500" : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200"}`}
-                title={isAutoMode ? "Stop Auto Mode" : "Start Auto Discussion"}
+                className={`p-2 rounded-full flex items-center justify-center gap-2 font-medium min-w-[120px] px-3 py-1.5 transition-all relative ${
+                  isAutoMode
+                    ? "animate-pulse text-red-600 bg-red-50 border border-red-500"
+                    : isAutoPrimed
+                      ? "text-indigo-600 bg-indigo-50 border border-indigo-400 shadow-[0_0_10px_rgba(79,70,229,0.2)]"
+                      : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200"
+                }`}
+                title={isAutoMode ? "Stop Auto Mode" : isAutoPrimed ? "Auto-Mode Primed (Click to disable)" : "Start Auto Discussion"}
               >
                {isAutoMode ? (
                 <>
@@ -951,10 +1102,15 @@ export default function ConversationPage() {
                 </>
                ) : (
                 <>
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${isAutoPrimed ? "animate-spin-slow text-indigo-500" : ""}`}>
                    <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
                  </svg>
-                 <span>Auto</span>
+                 <span>{isAutoPrimed ? "Discuss" : "Auto"}</span>
+                 {isAutoPrimed && (
+                   <span className="absolute -top-2 -right-1 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">
+                     {autoModeType}
+                   </span>
+                 )}
                 </>
                )}
              </button>
@@ -963,8 +1119,12 @@ export default function ConversationPage() {
             <button
                onClick={handleSend}
                disabled={!newMessage.trim() || isTyping || isAutoMode}
-               className="bg-indigo-600 hover:bg-indigo-700 disabled:opacity-30 disabled:cursor-not-allowed text-white p-2 rounded-full transition-all active:scale-95 flex items-center justify-center shadow-md"
-               title="Send Message"
+               className={`${
+                 isAutoPrimed
+                   ? "bg-indigo-500 hover:bg-indigo-600 shadow-indigo-200"
+                   : "bg-indigo-600 hover:bg-indigo-700"
+                } disabled:opacity-30 disabled:cursor-not-allowed text-white p-2 rounded-full transition-all active:scale-95 flex items-center justify-center shadow-md`}
+               title={isAutoPrimed ? "Send and Start Discussion" : "Send Message"}
              >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
                  <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-3.22-3.22V16.5a.75.75 0 0 1-1.5 0V4.81L8.03 8.03a.75.75 0 0 1-1.06-1.06l4.5-4.5ZM3 15.75a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />

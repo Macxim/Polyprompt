@@ -66,15 +66,6 @@ export default function ConversationModal({ spaceId }: Props) {
     // 2. Create Conversation
     const newConversationId = Date.now().toString(36) + Math.random().toString(36).substr(2);
 
-    // Construct initial messages if starting prompt exists?
-    // Actually user wants "Prompt: ..." which might mean the starting USER message.
-    const initialMessages = template.startingPrompt ? [{
-      id: "init-prompt-" + Date.now(),
-      role: "user" as const,
-      content: template.startingPrompt,
-      timestamp: Date.now(),
-    }] : [];
-
     dispatch({
       type: "UPDATE_SPACE",
       id: space.id,
@@ -84,7 +75,7 @@ export default function ConversationModal({ spaceId }: Props) {
           {
             id: newConversationId,
             title: template.name, // Use template name as title
-            messages: initialMessages,
+            messages: [],
             participantIds: template.selectedAgents,
           },
         ],
@@ -92,19 +83,25 @@ export default function ConversationModal({ spaceId }: Props) {
     });
 
     if (template.autoModeEnabled) {
-      // We can't easily trigger the "Auto Mode" loop from here directly because it's in the page component logic.
-      // But we can enable it via query param or just rely on the user seeing the prompt.
-      // For now we'll just create the conversation.
-      // User request said "Auto-mode: ON".
-      // Maybe we append `?auto=true` to the URL?
       dispatch({ type: "SET_BANNER", payload: { message: `Started "${template.name}" template.` } });
     } else {
       dispatch({ type: "SET_BANNER", payload: { message: "Conversation created." } });
     }
 
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });
-    router.push(`/space/${spaceId}/conversation/${newConversationId}${template.autoModeEnabled ? "?auto=true" : ""}`);
+
+    // Construct URL with prompt if exists
+    let url = `/space/${spaceId}/conversation/${newConversationId}`;
+    const params = new URLSearchParams();
+    if (template.autoModeEnabled) params.set('auto', 'true');
+    if (template.startingPrompt) params.set('prompt', template.startingPrompt);
+
+    const queryString = params.toString();
+    if (queryString) url += `?${queryString}`;
+
+    router.push(url);
   };
+
 
   const handleStartCustom = () => {
     if (!space) return;
@@ -211,11 +208,6 @@ export default function ConversationModal({ spaceId }: Props) {
                     <div className="flex items-center gap-2 mb-2 w-full">
                       <span className="text-2xl group-hover:scale-110 transition-transform">{template.icon}</span>
                       <span className="font-bold text-slate-800 flex-1">{template.name}</span>
-                       {template.autoModeEnabled && (
-                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-100 px-1.5 py-0.5 rounded-full uppercase tracking-wider">
-                          Auto
-                        </span>
-                      )}
                     </div>
                     <p className="text-xs text-slate-500 line-clamp-2">{template.description}</p>
                     <div className="mt-3 flex -space-x-2 overflow-hidden py-1">
