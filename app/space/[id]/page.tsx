@@ -215,7 +215,7 @@ export default function SpacePage() {
               <ul className="space-y-4 mb-6">
                 {spaceAgents.map((agent) => (
                   <li key={agent.id} className="pb-4 border-b border-slate-100 last:border-0 last:pb-0">
-                    <div className="flex justify-between items-start mb-2">
+                    <div className="flex justify-between items-start">
                       <div className="flex items-center gap-2">
                         <AvatarDisplay agent={agent} size="sm" />
                         <span className="font-semibold text-slate-800">{agent.name}</span>
@@ -230,12 +230,14 @@ export default function SpacePage() {
                       </svg>
                       </button>
                     </div>
-                    <input
-                      className="w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400"
-                      placeholder="Override Role/Persona..."
-                      value={agent.persona}
-                      onChange={(e) => updateAgentPersona(agent.id, e.target.value)}
-                    />
+                    {!agent.isDefault && (
+                      <input
+                        className="mt-2 w-full bg-slate-50 border border-slate-200 text-slate-700 px-3 py-2 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all placeholder:text-slate-400"
+                        placeholder="Override Role/Persona..."
+                        value={agent.persona}
+                        onChange={(e) => updateAgentPersona(agent.id, e.target.value)}
+                      />
+                    )}
                   </li>
                 ))}
                 {spaceAgents.length === 0 && (
