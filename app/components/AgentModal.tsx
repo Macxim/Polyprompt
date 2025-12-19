@@ -20,6 +20,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
   const [avatar, setAvatar] = useState<string | null>(null);
   const [avatarType, setAvatarType] = useState<"auto" | "emoji" | "url">("auto");
   const [customUrl, setCustomUrl] = useState("");
+  const [verbosity, setVerbosity] = useState<'concise' | 'balanced' | 'detailed'>('balanced');
   const [nameError, setNameError] = useState("");
   const [personaError, setPersonaError] = useState("");
   const [descriptionError, setDescriptionError] = useState("");
@@ -48,6 +49,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
           setAvatarType("url");
           setCustomUrl(activeAgent.avatar);
         }
+        setVerbosity(activeAgent.verbosity || "balanced");
       } else {
         setName("");
         setPersona("");
@@ -57,6 +59,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
         setAvatar(null);
         setAvatarType("auto");
         setCustomUrl("");
+        setVerbosity("balanced");
       }
       setNameError("");
       setPersonaError("");
@@ -86,14 +89,14 @@ export default function AgentModal({ onAgentCreated }: Props) {
     if (activeAgent) {
       dispatch({
         type: "UPDATE_AGENT",
-        payload: { ...activeAgent, name, persona, description, model, temperature, avatar },
+        payload: { ...activeAgent, name, persona, description, model, temperature, avatar, verbosity },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent updated." } });
     } else {
       const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       dispatch({
         type: "ADD_AGENT",
-        payload: { id: newId, name, persona, description, model, temperature, avatar },
+        payload: { id: newId, name, persona, description, model, temperature, avatar, verbosity },
       });
       dispatch({ type: "SET_BANNER", payload: { message: "Agent created." } });
 
@@ -246,6 +249,33 @@ export default function AgentModal({ onAgentCreated }: Props) {
             )}
           </div>
 
+          <div>
+            <label className="block text-sm font-medium text-slate-700">
+              Description
+            </label>
+            <textarea
+              className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
+              rows={3}
+              placeholder="Optional description..."
+              value={description}
+              onChange={(e) => {
+                setDescription(e.target.value);
+                if (descriptionError) setDescriptionError("");
+              }}
+              maxLength={200}
+            />
+            <div className="flex justify-between items-center mt-1">
+              {descriptionError ? (
+                <p className="text-red-600 text-sm">{descriptionError}</p>
+              ) : (
+                <div></div>
+              )}
+              <div className="text-xs text-slate-400">
+                {description.length}/200
+              </div>
+            </div>
+          </div>
+
           {/* Behavior Section */}
           <section className="space-y-6 pt-4 border-t border-slate-100">
              <h3 className="text-sm font-semibold text-slate-400 uppercase tracking-wider">Behavior</h3>
@@ -341,32 +371,44 @@ export default function AgentModal({ onAgentCreated }: Props) {
               </p>
             </div>
 
+            {/* Response Length Section */}
             <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">
-                Description
+              <label className="block text-sm font-medium text-slate-700 mb-3">
+                Response Length
               </label>
-              <textarea
-                className="w-full border border-slate-300 rounded-lg px-4 py-3 text-slate-900 focus:ring-2 focus:ring-indigo-500 focus:border-transparent outline-none transition-all resize-none"
-                rows={3}
-                placeholder="Optional description..."
-                value={description}
-                onChange={(e) => {
-                  setDescription(e.target.value);
-                  if (descriptionError) setDescriptionError("");
-                }}
-                maxLength={200}
-              />
-              <div className="flex justify-between items-center mt-1">
-                {descriptionError ? (
-                  <p className="text-red-600 text-sm">{descriptionError}</p>
-                ) : (
-                  <div></div>
-                )}
-                <div className="text-xs text-slate-400">
-                  {description.length}/200
+              <div className="bg-slate-50 p-4 rounded-xl space-y-4">
+                <div className="flex gap-2 p-1 bg-slate-200/50 rounded-xl">
+                  {([
+                    { id: 'concise', label: 'Concise', icon: '📝' },
+                    { id: 'balanced', label: 'Balanced', icon: '⚖️' },
+                    { id: 'detailed', label: 'Detailed', icon: '📖' }
+                  ] as const).map((opt) => (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setVerbosity(opt.id)}
+                      className={`flex-1 flex items-center justify-center gap-2 py-2 text-sm font-semibold rounded-lg transition-all ${
+                        verbosity === opt.id
+                          ? "bg-white text-indigo-600 shadow-sm"
+                          : "text-slate-500 hover:text-slate-700 hover:bg-white/50"
+                      }`}
+                    >
+                      <span className="text-base">{opt.icon}</span>
+                      {opt.label}
+                    </button>
+                  ))}
+                </div>
+
+                <div className="text-xs space-y-2">
+                  <p className="text-slate-600 leading-relaxed font-medium">
+                    {verbosity === 'concise' && "💡 Keep responses brief (1 paragraph max). Best for multiple agents or quick summaries."}
+                    {verbosity === 'balanced' && "💡 Provide thoughtful responses (2-3 paragraphs). Standard balance for most tasks."}
+                    {verbosity === 'detailed' && "💡 Give comprehensive responses (3+ paragraphs). Best for deep dives and analysis."}
+                  </p>
                 </div>
               </div>
             </div>
+
           </section>
         </div>
 

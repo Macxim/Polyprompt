@@ -9,6 +9,7 @@ export type Agent = {
   avatar?: string | null; // Image URL, emoji, or null for auto-generated
   isDefault?: boolean;
   isHidden?: boolean;
+  verbosity?: 'concise' | 'balanced' | 'detailed';
 };
 
 export type Message = {

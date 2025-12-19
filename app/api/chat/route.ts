@@ -16,12 +16,19 @@ export async function POST(req: Request) {
       return new Response("Missing required fields", { status: 400 });
     }
 
+    // Build the verbosity instructions
+    const verbosityMap = {
+      concise: "Keep responses brief (1 paragraph max). Be direct and actionable.",
+      balanced: "Provide thoughtful responses (2-3 paragraphs). Balance detail with clarity.",
+      detailed: "Give comprehensive responses (3+ paragraphs). Explore nuances and provide examples."
+    };
+    const verbosityInstruction = verbosityMap[agent.verbosity as keyof typeof verbosityMap] || verbosityMap.balanced;
+
     // Build the conversation context for OpenAI
     const openaiMessages = [
       {
         role: "system" as const,
-        content: (agent.persona || "You are a helpful AI assistant.") + " Be helpful and engaging. Provide clear answers, avoiding unnecessary brevity but also avoiding rambling.",
-
+        content: `${agent.persona || "You are a helpful AI assistant."}\n\nIMPORTANT: ${verbosityInstruction}`,
       },
       // Include previous conversation history
       ...(conversationHistory || []).map((msg: any) => ({

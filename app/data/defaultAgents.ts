@@ -11,6 +11,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "🎯",
     temperature: 0.7,
     isDefault: true,
+    verbosity: 'detailed',
   },
   {
     id: "devils_advocate",
@@ -21,6 +22,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "😈",
     temperature: 0.8,
     isDefault: true,
+    verbosity: 'balanced',
   },
   {
     id: "creative_ideator",
@@ -31,6 +33,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "💡",
     temperature: 0.9,
     isDefault: true,
+    verbosity: 'concise',
   },
   {
     id: "practical_realist",
@@ -51,6 +54,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "📚",
     temperature: 0.4,
     isDefault: true,
+    verbosity: 'detailed',
   },
 
   // Specialized Agents
