@@ -31,7 +31,7 @@ export default function AgentCard({ agent, onDuplicate, onToggleVisibility }: Pr
 
        {agent.isDefault && !agent.isHidden && (
          <div className="absolute top-4 right-4 z-20">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-amber-600 bg-amber-100 px-2 py-1 rounded-full border border-amber-200">
               Default
             </span>
          </div>
@@ -39,7 +39,7 @@ export default function AgentCard({ agent, onDuplicate, onToggleVisibility }: Pr
 
        {agent.isHidden && (
          <div className="absolute top-4 right-4 z-20">
-            <span className="text-[10px] font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 bg-slate-100 px-2 py-1 rounded-full border border-slate-200">
               Hidden
             </span>
          </div>

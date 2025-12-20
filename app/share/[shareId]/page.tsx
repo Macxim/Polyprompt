@@ -97,7 +97,7 @@ export default async function SharedPage({ params }: Props) {
                 */}
                 {msg.role === "agent" && (
                    <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
-                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-[10px]">
+                     <div className="w-6 h-6 rounded-full bg-slate-200 flex items-center justify-center text-xs">
                         {msg.agentName?.[0] || "A"}
                      </div>
                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">

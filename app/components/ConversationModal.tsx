@@ -215,7 +215,7 @@ export default function ConversationModal({ spaceId }: Props) {
                          const agent = state.agents.find(a => a.id === agentId);
                          if (!agent) return null;
                          return (
-                           <div key={agentId} className="h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 flex items-center justify-center text-[10px]" title={agent.name}>
+                           <div key={agentId} className="h-6 w-6 rounded-full ring-2 ring-white bg-slate-200 flex items-center justify-center text-xs" title={agent.name}>
                              {agent.avatar && agent.avatar.length <= 2 ? agent.avatar : (agent.name[0] || "?")}
                            </div>
                          )
