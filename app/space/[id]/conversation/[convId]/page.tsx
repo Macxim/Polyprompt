@@ -8,6 +8,7 @@ import ReactMarkdown from "react-markdown";
 import AvatarDisplay from "@/app/components/AvatarDisplay";
 import ThinkingIndicator from "@/app/components/ThinkingIndicator";
 import AutoModeModal from "@/app/components/AutoModeModal";
+import ChatMessage from "@/app/components/ChatMessage";
 
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
@@ -80,6 +81,30 @@ export default function ConversationPage() {
       const newUrl = window.location.pathname + (queryString ? `?${queryString}` : '');
       window.history.replaceState({}, '', newUrl);
     }
+
+    // Auto-focus input
+    inputRef.current?.focus();
+  }, []);
+
+  // Keyboard Shortcuts
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Cmd/Ctrl + K: Open Auto-Mode Modal
+      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+        e.preventDefault();
+        setIsAutoModalOpen(prev => !prev);
+      }
+
+      // Esc: Close menus or modals
+      if (e.key === 'Escape') {
+        setShowExportMenu(false);
+        setShowMentionDropdown(false);
+        setIsAutoModalOpen(false);
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
 
 
@@ -861,53 +886,11 @@ export default function ConversationPage() {
           </div>
         ) : (
           conversation.messages.map((msg) => (
-            <div
-              key={msg.id}
-              className={`flex w-full ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}
-            >
-              <div
-                className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm ${
-                  msg.role === "user"
-                    ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none"
-                    : msg.isSummary
-                      ? "bg-amber-50 border border-amber-200 text-slate-800 rounded-bl-none ring-4 ring-amber-50/50"
-                      : "bg-white border border-slate-100 text-slate-800 rounded-bl-none"
-                }`}
-              >
-                {msg.isSummary && (
-                  <div className="mb-3 pb-2 border-b border-amber-200/50 flex items-center gap-2">
-                     <span className="text-xl">📝</span>
-                     <span className="font-bold text-amber-800 text-xs uppercase tracking-wider">Discussion Summary</span>
-                  </div>
-                )}
-                {msg.role === "agent" && (
-                  <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
-                    <AvatarDisplay
-                      agent={{
-                        id: msg.agentId || "",
-                        name: msg.agentName || "Agent",
-                        avatar: state.agents.find(a => a.id === msg.agentId)?.avatar
-                      }}
-                      size="sm"
-                    />
-                    <div className="flex items-baseline gap-2">
-                       <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
-                         {msg.agentName}
-                       </span>
-                       {state.agents.find(a => a.id === msg.agentId)?.persona && (
-                          <span className="text-[12px] text-slate-400 font-medium">
-                            {state.agents.find(a => a.id === msg.agentId)?.persona}
-                          </span>
-                       )}
-                    </div>
-                  </div>
-                )}
-
-                <div className={`prose prose-sm ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-relaxed overflow-x-auto`}>
-                  <ReactMarkdown>{msg.content}</ReactMarkdown>
-                </div>
-              </div>
-            </div>
+             <ChatMessage
+               key={msg.id}
+               msg={msg}
+               agents={state.agents}
+             />
           ))
         )}
         {isThinking && (
