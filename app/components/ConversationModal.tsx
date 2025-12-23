@@ -274,19 +274,30 @@ export default function ConversationModal({ spaceId }: Props) {
                     <h4 className="text-xs font-bold text-slate-400 uppercase mb-2">Default Agents</h4>
                     <div className="space-y-2">
                       {allDefaults.map(agent => (
-                        <label key={agent.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-100 transition-colors">
-                           <input
-                            type="checkbox"
-                            checked={selectedAgentIds.includes(agent.id)}
-                            onChange={() => toggleAgentSelection(agent.id)}
-                            className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
-                          />
+                        <label key={agent.id} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all ${selectedAgentIds.includes(agent.id) ? 'bg-indigo-50/50 border-indigo-200 shadow-sm' : 'hover:bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                           <div className="relative flex items-center justify-center">
+                             <input
+                              type="checkbox"
+                              checked={selectedAgentIds.includes(agent.id)}
+                              onChange={() => toggleAgentSelection(agent.id)}
+                              className="peer sr-only"
+                             />
+                             <div className={`w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center ${selectedAgentIds.includes(agent.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
+                               <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 text-white transition-transform ${selectedAgentIds.includes(agent.id) ? 'scale-100' : 'scale-0'}`}>
+                                 <path fillRule="evenodd" d="M16.704 4.103a.75.75 0 0 1 .023 1.06l-8.47 8.47a.75.75 0 0 1-1.06 0l-4.242-4.242a.75.75 0 0 1 1.06-1.06l3.712 3.712 7.94-7.94a.75.75 0 0 1 1.06-.023Z" clipRule="evenodd" />
+                               </svg>
+                             </div>
+                           </div>
                            <div className="flex-1">
                              <div className="flex items-center gap-2">
-                               <span className="text-sm font-medium text-slate-800">{agent.name}</span>
-                               <span className="text-xs bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded">{agent.model}</span>
+                               <span className={`text-sm font-bold transition-colors ${selectedAgentIds.includes(agent.id) ? 'text-indigo-900' : 'text-slate-700'}`}>
+                                 {agent.name}
+                               </span>
+                               <span className="text-[10px] font-bold bg-white text-slate-400 border border-slate-100 px-1.5 py-0.5 rounded shadow-sm opacity-80 uppercase tracking-tighter">
+                                 {agent.model}
+                               </span>
                              </div>
-                             <p className="text-xs text-slate-400 line-clamp-1">{agent.persona}</p>
+                             <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{agent.persona}</p>
                            </div>
                         </label>
                       ))}
@@ -298,20 +309,29 @@ export default function ConversationModal({ spaceId }: Props) {
                     <div>
                       <h4 className="text-xs font-bold text-slate-400 uppercase mb-2 mt-4">My Custom Agents</h4>
                        <div className="space-y-2">
-                        {allCustom.map(agent => (
-                          <label key={agent.id} className="flex items-center gap-3 p-2 hover:bg-slate-50 rounded-lg cursor-pointer border border-transparent hover:border-slate-100 transition-colors">
-                            <input
-                              type="checkbox"
-                              checked={selectedAgentIds.includes(agent.id)}
-                              onChange={() => toggleAgentSelection(agent.id)}
-                              className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-gray-300"
-                            />
-                            <div className="flex-1">
-                               <div className="flex items-center gap-2">
-                                 <span className="text-sm font-medium text-slate-800">{agent.name}</span>
-                               </div>
-                               <p className="text-xs text-slate-400 line-clamp-1">{agent.persona}</p>
+                         {allCustom.map(agent => (
+                          <label key={agent.id} className={`flex items-center gap-3 p-3 rounded-xl cursor-pointer border transition-all ${selectedAgentIds.includes(agent.id) ? 'bg-indigo-50/50 border-indigo-200 shadow-sm' : 'hover:bg-slate-50 border-transparent hover:border-slate-200'}`}>
+                             <div className="relative flex items-center justify-center">
+                               <input
+                                  type="checkbox"
+                                  checked={selectedAgentIds.includes(agent.id)}
+                                  onChange={() => toggleAgentSelection(agent.id)}
+                                  className="peer sr-only"
+                                />
+                                <div className={`w-6 h-6 rounded-md border-2 transition-all flex items-center justify-center ${selectedAgentIds.includes(agent.id) ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300 bg-white group-hover:border-slate-400'}`}>
+                                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className={`w-4 h-4 text-white transition-transform ${selectedAgentIds.includes(agent.id) ? 'scale-100' : 'scale-0'}`}>
+                                    <path fillRule="evenodd" d="M16.704 4.103a.75.75 0 0 1 .023 1.06l-8.47 8.47a.75.75 0 0 1-1.06 0l-4.242-4.242a.75.75 0 0 1 1.06-1.06l3.712 3.712 7.94-7.94a.75.75 0 0 1 1.06-.023Z" clipRule="evenodd" />
+                                  </svg>
+                                </div>
                              </div>
+                             <div className="flex-1">
+                                <div className="flex items-center gap-2">
+                                  <span className={`text-sm font-bold transition-colors ${selectedAgentIds.includes(agent.id) ? 'text-indigo-900' : 'text-slate-700'}`}>
+                                    {agent.name}
+                                  </span>
+                                </div>
+                                <p className="text-xs text-slate-500 line-clamp-1 mt-0.5">{agent.persona}</p>
+                              </div>
                           </label>
                         ))}
                       </div>
@@ -321,19 +341,27 @@ export default function ConversationModal({ spaceId }: Props) {
               </div>
 
               {/* Auto Mode Toggle */}
-              <div className="flex items-center gap-3 bg-indigo-50 p-4 rounded-xl border border-indigo-100">
-                <input
-                   type="checkbox"
-                   id="autoMode"
-                   checked={autoMode}
-                   onChange={(e) => setAutoMode(e.target.checked)}
-                   className="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 border-indigo-300"
-                />
-                <label htmlFor="autoMode" className="cursor-pointer select-none">
-                   <div className="font-bold text-indigo-900 text-sm">Enable Auto-Mode</div>
-                   <div className="text-xs text-indigo-600">Agents will discuss automatically after your first message</div>
-                </label>
-              </div>
+               <label htmlFor="autoMode" className={`flex items-center gap-4 p-5 rounded-2xl cursor-pointer border transition-all ${autoMode ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
+                 <div className="relative">
+                   <input
+                      type="checkbox"
+                      id="autoMode"
+                      checked={autoMode}
+                      onChange={(e) => setAutoMode(e.target.checked)}
+                      className="peer sr-only"
+                   />
+                   <div className={`w-12 h-6 rounded-full transition-colors relative ${autoMode ? 'bg-indigo-500/50' : 'bg-slate-300'}`}>
+                     <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform ${autoMode ? 'translate-x-6' : 'translate-x-0'} shadow-sm`}></div>
+                   </div>
+                 </div>
+                 <div className="flex-1">
+                    <div className={`font-bold text-sm ${autoMode ? 'text-white' : 'text-slate-800'}`}>Enable Auto-Mode</div>
+                    <div className={`text-xs ${autoMode ? 'text-indigo-100' : 'text-slate-500'}`}>Agents will discuss automatically after your first message</div>
+                 </div>
+                 {autoMode && (
+                   <div className="text-xl animate-bounce">✨</div>
+                 )}
+               </label>
 
             </div>
           )}
