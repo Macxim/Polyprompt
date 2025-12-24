@@ -42,7 +42,7 @@ export default function Home() {
 
     dispatch({
       type: "SET_BANNER",
-      payload: { message: "Space created successfully." },
+      payload: { message: "Space created successfully.", type: "success" },
     });
 
     setName("");

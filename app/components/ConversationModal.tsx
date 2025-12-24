@@ -83,9 +83,9 @@ export default function ConversationModal({ spaceId }: Props) {
     });
 
     if (template.autoModeEnabled) {
-      dispatch({ type: "SET_BANNER", payload: { message: `Started "${template.name}" template.` } });
+      dispatch({ type: "SET_BANNER", payload: { message: `Started "${template.name}" template.`, type: "success" } });
     } else {
-      dispatch({ type: "SET_BANNER", payload: { message: "Conversation created." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
     }
 
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });
@@ -112,7 +112,7 @@ export default function ConversationModal({ spaceId }: Props) {
     }
 
     if (selectedAgentIds.length === 0) {
-      dispatch({ type: "SET_BANNER", payload: { message: "Please select at least one agent." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Please select at least one agent.", type: "error" } });
       return;
     }
 
@@ -146,7 +146,7 @@ export default function ConversationModal({ spaceId }: Props) {
       },
     });
 
-    dispatch({ type: "SET_BANNER", payload: { message: "Conversation created." } });
+    dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });
     router.push(`/space/${spaceId}/conversation/${newConversationId}${autoMode ? "?auto=true" : ""}`);
   };

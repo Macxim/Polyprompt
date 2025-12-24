@@ -18,7 +18,7 @@ export default function ChatMessage({ msg, agents }: ChatMessageProps) {
   const handleCopy = () => {
     navigator.clipboard.writeText(msg.content);
     setCopied(true);
-    dispatch({ type: "SET_BANNER", payload: { message: "Copied to clipboard!" } });
+    dispatch({ type: "SET_BANNER", payload: { message: "Copied to clipboard!", type: "success" } });
 
     setTimeout(() => {
       setCopied(false);

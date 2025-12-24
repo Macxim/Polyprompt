@@ -62,7 +62,7 @@ export default function SpacePage() {
     if (!space || !space.agentIds || space.agentIds.length === 0) {
       dispatch({
         type: "SET_BANNER",
-        payload: { message: "Add an agent before starting a conversation." },
+        payload: { message: "Add an agent before starting a conversation.", type: "error" },
       });
       return;
     }
@@ -116,7 +116,7 @@ export default function SpacePage() {
     dispatch({ type: "DELETE_SPACE", payload: { id: space.id } });
     dispatch({
       type: "SET_BANNER",
-      payload: { message: "Space deleted successfully." },
+      payload: { message: "Space deleted successfully.", type: "success" },
     });
 
     router.replace("/");
@@ -391,10 +391,10 @@ export default function SpacePage() {
                               type: "DELETE_CONVERSATION",
                               payload: { spaceId: space.id, conversationId: conv.id },
                             });
-                            dispatch({
-                              type: "SET_BANNER",
-                              payload: { message: "Conversation deleted." },
-                            });
+                             dispatch({
+                               type: "SET_BANNER",
+                               payload: { message: "Conversation deleted.", type: "success" },
+                             });
                           }
                         }}
                         className="absolute top-3 right-3 p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 z-10"

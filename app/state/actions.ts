@@ -32,5 +32,5 @@ export type Action =
   | { type: "CLOSE_CONVERSATION_MODAL" }
   | { type: "TOGGLE_SIDEBAR" }
   | { type: "SET_SIDEBAR_OPEN"; payload: boolean }
-  | { type: "SET_BANNER"; payload: { message: string | null } }
+  | { type: "SET_BANNER"; payload: { message: string | null; type?: "success" | "error" } }
   | { type: "HYDRATE_APP"; payload: AppState };

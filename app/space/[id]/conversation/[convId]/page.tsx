@@ -207,7 +207,7 @@ export default function ConversationPage() {
       setIsTyping(false);
       dispatch({
         type: "SET_BANNER",
-        payload: { message: "No agents available in this space." },
+        payload: { message: "No agents available in this space.", type: "error" },
       });
       return;
     }
@@ -218,7 +218,7 @@ export default function ConversationPage() {
       setIsTyping(false);
       dispatch({
         type: "SET_BANNER",
-        payload: { message: "No matching agents found for your @mentions." },
+        payload: { message: "No matching agents found for your @mentions.", type: "error" },
       });
       return;
     }
@@ -330,7 +330,8 @@ export default function ConversationPage() {
         payload: {
           message: error.message === "API error: 401"
             ? "Invalid API key. Please check your .env.local file."
-            : "Failed to get response. Please try again."
+            : "Failed to get response. Please try again.",
+          type: "error"
         },
       });
     } finally {
@@ -358,7 +359,7 @@ export default function ConversationPage() {
     const topic = explicitTopic || newMessage.trim();
 
     if (!topic) {
-      dispatch({ type: "SET_BANNER", payload: { message: "Please enter a topic first." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Please enter a topic first.", type: "error" } });
       return;
     }
 
@@ -367,7 +368,7 @@ export default function ConversationPage() {
       ? allSpaceAgents.filter(a => conversation.participantIds!.includes(a.id))
       : allSpaceAgents;
     if (spaceAgents.length < 2) {
-       dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode requires at least 2 agents in the space." } });
+       dispatch({ type: "SET_BANNER", payload: { message: "Auto-mode requires at least 2 agents in the space.", type: "error" } });
        return;
     }
 
@@ -397,7 +398,7 @@ export default function ConversationPage() {
 
       // 2. Call Planner API
       // Create a temporary loading indicator
-      dispatch({ type: "SET_BANNER", payload: { message: "Planning discussion..." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Planning discussion...", type: "success" } });
 
       // Clear input and modal
       setNewMessage("");
@@ -430,7 +431,7 @@ export default function ConversationPage() {
         plan.push(summarySteps[summarySteps.length - 1]);
       }
 
-      dispatch({ type: "SET_BANNER", payload: { message: `Auto-discussion started: ${plan.length} turns planned.` } });
+      dispatch({ type: "SET_BANNER", payload: { message: `Auto-discussion started: ${plan.length} turns planned.`, type: "success" } });
 
       // 3. Execute the Plan
       // We need to track history locally because react state won't update fast enough in this loop?
@@ -581,12 +582,12 @@ export default function ConversationPage() {
       }
 
       const endMsg = stopRef.current ? "Auto-mode stopped by user." : "Auto-discussion complete.";
-      dispatch({ type: "SET_BANNER", payload: { message: endMsg } });
+      dispatch({ type: "SET_BANNER", payload: { message: endMsg, type: "success" } });
 
     } catch (error: any) {
       if (error.name !== 'AbortError') {
         console.error("Auto-discuss error:", error);
-        dispatch({ type: "SET_BANNER", payload: { message: "Auto-discuss failed. " + error.message } });
+        dispatch({ type: "SET_BANNER", payload: { message: "Auto-discuss failed. " + error.message, type: "error" } });
       }
     } finally {
       setIsAutoMode(false);
@@ -677,7 +678,7 @@ export default function ConversationPage() {
   const handleShare = async () => {
     if (isSharing) return;
     setIsSharing(true);
-    dispatch({ type: "SET_BANNER", payload: { message: "Generating public link..." } });
+    dispatch({ type: "SET_BANNER", payload: { message: "Generating public link...", type: "success" } });
 
     try {
         const res = await fetch("/api/share", {
@@ -692,10 +693,10 @@ export default function ConversationPage() {
         const url = `${window.location.origin}/share/${shareId}`;
 
         await navigator.clipboard.writeText(url);
-        dispatch({ type: "SET_BANNER", payload: { message: "Link copied to clipboard!" } });
+        dispatch({ type: "SET_BANNER", payload: { message: "Link copied to clipboard!", type: "success" } });
     } catch (e: any) {
         console.error("Share error", e);
-        dispatch({ type: "SET_BANNER", payload: { message: "Failed to share: " + (e.message || "Unknown error") } });
+        dispatch({ type: "SET_BANNER", payload: { message: "Failed to share: " + (e.message || "Unknown error"), type: "error" } });
     } finally {
         setIsSharing(false);
     }

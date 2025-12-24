@@ -91,14 +91,14 @@ export default function AgentModal({ onAgentCreated }: Props) {
         type: "UPDATE_AGENT",
         payload: { ...activeAgent, name, persona, description, model, temperature, avatar, verbosity },
       });
-      dispatch({ type: "SET_BANNER", payload: { message: "Agent updated." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Agent updated.", type: "success" } });
     } else {
       const newId = Date.now().toString(36) + Math.random().toString(36).substr(2);
       dispatch({
         type: "ADD_AGENT",
         payload: { id: newId, name, persona, description, model, temperature, avatar, verbosity },
       });
-      dispatch({ type: "SET_BANNER", payload: { message: "Agent created." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Agent created.", type: "success" } });
 
       if (onAgentCreated) onAgentCreated(newId);
     }

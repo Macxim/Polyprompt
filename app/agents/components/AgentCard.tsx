@@ -20,7 +20,7 @@ export default function AgentCard({ agent, onDuplicate, onToggleVisibility }: Pr
   const handleDelete = () => {
     if (confirm(`Delete agent "${agent.name}"?`)) {
       dispatch({ type: "DELETE_AGENT", payload: { id: agent.id } });
-      dispatch({ type: "SET_BANNER", payload: { message: "Agent deleted." } });
+      dispatch({ type: "SET_BANNER", payload: { message: "Agent deleted.", type: "success" } });
     }
   };
 

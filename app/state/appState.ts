@@ -11,7 +11,7 @@ export type AppState = {
     isSpaceModalOpen: boolean;
     isConversationModalOpen: boolean;
     isSidebarOpen: boolean;
-    bannerMessage: { message: string | null };
+    bannerMessage: { message: string | null; type?: "success" | "error" };
   };
   _hydrated: boolean;
 };
@@ -26,7 +26,7 @@ export const initialAppState: AppState = {
     isSpaceModalOpen: false,
     isConversationModalOpen: false,
     isSidebarOpen: false,
-    bannerMessage: { message: null },
+    bannerMessage: { message: null, type: "success" },
   },
   _hydrated: false,
 };

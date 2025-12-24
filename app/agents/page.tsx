@@ -50,7 +50,7 @@ export default function AgentsPage() {
         isHidden: false, // Ensure copy is visible
       },
     });
-    dispatch({ type: "SET_BANNER", payload: { message: `Duplicated ${agent.name}.` } });
+    dispatch({ type: "SET_BANNER", payload: { message: `Duplicated ${agent.name}.`, type: "success" } });
   };
 
   const handleToggleVisibility = (agent: any) => {
