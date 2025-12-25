@@ -22,14 +22,17 @@ export default function ConversationPage() {
   const [mentionSearch, setMentionSearch] = useState("");
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [isAutoMode, setIsAutoMode] = useState(false);
   const [isAutoModalOpen, setIsAutoModalOpen] = useState(false);
   const [isAutoPrimed, setIsAutoPrimed] = useState(false);
   const [autoModeType, setAutoModeType] = useState<'quick' | 'deep'>('deep');
   const [isSharing, setIsSharing] = useState(false);
   const [isThinking, setIsThinking] = useState(false);
+  const [isAutoMode, setIsAutoMode] = useState(false);
+  const [showScrollButton, setShowScrollButton] = useState(false);
+  const [hasNewMessages, setHasNewMessages] = useState(false);
   const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const abortControllerRef = useRef<AbortController | null>(null);
 
@@ -50,14 +53,34 @@ export default function ConversationPage() {
   const space = state.spaces.find((s) => s.id === spaceId);
   const conversation = space?.conversations.find((c) => c.id === convId);
 
-  // Auto-scroll to bottom
+  // Scroll to bottom on new messages
+  useEffect(() => {
+    if (!showScrollButton) {
+      scrollToBottom();
+    } else {
+        setHasNewMessages(true);
+    }
+  }, [conversation?.messages]);
+
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+    setHasNewMessages(false);
   };
 
+  const handleScroll = () => {
+    if (!scrollContainerRef.current) return;
+    const { scrollTop, scrollHeight, clientHeight } = scrollContainerRef.current;
+    const isAtBottom = scrollHeight - scrollTop - clientHeight < 100;
+    setShowScrollButton(!isAtBottom);
+    if (isAtBottom) setHasNewMessages(false);
+  };
+
+  // Auto-scroll to bottom
   useEffect(() => {
-    scrollToBottom();
-  }, [conversation?.messages, isTyping]);
+    if (!showScrollButton) {
+      scrollToBottom();
+    }
+  }, [isTyping]);
 
   // Handle pre-filled prompt and auto-prime from template
   useEffect(() => {
@@ -833,7 +856,10 @@ export default function ConversationPage() {
       </div>
 
       {/* Messages Area */}
-      <div className={`flex-1 overflow-y-auto p-4 sm:p-6 space-y-6 ${conversation.messages.length === 0 ? 'flex flex-col items-center justify-center' : ''}`}>
+      <main
+        ref={scrollContainerRef}
+        onScroll={handleScroll}
+        className={`flex-1 overflow-y-auto p-4 md:p-8 space-y-6 scroll-smooth ${conversation.messages.length === 0 ? 'flex flex-col items-center justify-center' : ''}`}>
         {conversation.messages.length === 0 ? (
           <div className="max-w-md w-full glass-panel bg-white/40 border border-slate-200/60 rounded-3xl p-8 shadow-xl backdrop-blur-sm animate-in fade-in zoom-in duration-500">
             <div className="mb-8">
@@ -900,7 +926,31 @@ export default function ConversationPage() {
            </div>
         )}
         <div ref={messagesEndRef} />
-      </div>
+
+        {/* Scroll to Bottom Button */}
+        {showScrollButton && (
+            <button
+                onClick={scrollToBottom}
+                className="fixed bottom-32 right-8 bg-indigo-600 text-white p-3 rounded-full shadow-2xl hover:bg-indigo-700 transition-all animate-bounce-subtle z-20 flex items-center gap-2 group"
+                title="Scroll to bottom"
+            >
+                {hasNewMessages && (
+                    <span className="absolute -top-1 -right-1 flex h-4 w-4">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-4 w-4 bg-red-500 border-2 border-white"></span>
+                    </span>
+                )}
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                    <path fillRule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v16.19l6.22-6.22a.75.75 0 1 1 1.06 1.06l-7.5 7.5a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 1 1 1.06-1.06l6.22 6.22V3a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
+                </svg>
+                {hasNewMessages && (
+                    <span className="max-w-0 overflow-hidden group-hover:max-w-xs transition-all duration-300 text-sm font-bold whitespace-nowrap pr-2">
+                        New Messages
+                    </span>
+                )}
+            </button>
+        )}
+      </main>
 
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-slate-200">
