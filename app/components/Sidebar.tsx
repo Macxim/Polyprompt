@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "../state/AppProvider";
+import { useMemo } from "react";
 
 export default function Sidebar() {
   const { state, dispatch } = useApp();
@@ -11,6 +12,21 @@ export default function Sidebar() {
   const closeSidebar = () => {
     dispatch({ type: "SET_SIDEBAR_OPEN", payload: false });
   };
+
+  const recentChats = useMemo(() => {
+    const all = state.spaces.flatMap((s) =>
+      s.conversations.map((c) => ({
+        ...c,
+        spaceId: s.id,
+        spaceName: s.name,
+      }))
+    );
+
+    // Sort by updatedAt (newest first). If missing, we can use 0.
+    return all
+      .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
+      .slice(0, 5);
+  }, [state.spaces]);
 
   return (
     <>
@@ -28,7 +44,8 @@ export default function Sidebar() {
           state.ui.isSidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
         }`}
       >
-        <div className="p-6">
+        <div className="flex-1 flex flex-col min-h-0">
+          <div className="p-6">
           <div className="flex items-center justify-between mb-8">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
@@ -78,7 +95,43 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        <div className="mt-auto p-4 border-t border-slate-100">
+        <div className="flex-1 overflow-y-auto px-6 py-4 border-t border-slate-50">
+           <h3 className="text-xs ml-3 font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+             Recent Chats
+           </h3>
+           <div className="space-y-1">
+             {recentChats.length === 0 ? (
+               <p className="text-[11px] text-slate-400 italic px-3 py-2">No recent chats yet.</p>
+             ) : (
+               recentChats.map((chat) => (
+                 <Link
+                   key={chat.id}
+                   href={`/space/${chat.spaceId}/conversation/${chat.id}`}
+                   onClick={closeSidebar}
+                   className={`flex flex-col px-3 py-2 rounded-lg transition-all group ${
+                     pathname === `/space/${chat.spaceId}/conversation/${chat.id}`
+                       ? "bg-indigo-50/80 border border-indigo-100 shadow-sm"
+                       : "hover:bg-slate-50 border border-transparent"
+                   }`}
+                 >
+                   <div className="flex items-center gap-2">
+                     <span className="text-sm">💬</span>
+                     <span className={`text-xs font-bold truncate flex-1 ${
+                       pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
+                     }`}>
+                       {chat.title}
+                     </span>
+                   </div>
+                   <span className="text-[10px] text-slate-400 ml-6 truncate">
+                     {chat.spaceName}
+                   </span>
+                 </Link>
+               ))
+             )}
+           </div>
+        </div>
+
+        <div className="p-4 border-t border-slate-100">
           <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
             <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
               <UserIcon />
@@ -88,6 +141,7 @@ export default function Sidebar() {
               <p className="text-xs text-slate-400 truncate">Settings</p>
             </div>
           </div>
+        </div>
         </div>
       </aside>
     </>

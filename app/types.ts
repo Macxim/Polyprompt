@@ -44,6 +44,7 @@ export type Conversation = {
   title: string;
   messages: Message[];
   participantIds?: string[];
+  updatedAt?: number;
 };
 
 export type SharedConversation = Conversation & {

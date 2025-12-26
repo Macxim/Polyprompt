@@ -77,6 +77,7 @@ export default function ConversationModal({ spaceId }: Props) {
             title: template.name, // Use template name as title
             messages: [],
             participantIds: template.selectedAgents,
+            updatedAt: Date.now(),
           },
         ],
       },
@@ -141,6 +142,7 @@ export default function ConversationModal({ spaceId }: Props) {
             title: title.trim(),
             messages: [],
             participantIds: selectedAgentIds,
+            updatedAt: Date.now(),
           },
         ],
       },

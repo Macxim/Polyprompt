@@ -123,6 +123,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
               return {
                 ...conv,
                 messages: [...conv.messages, message],
+                updatedAt: Date.now(),
               };
             }),
           };
@@ -148,6 +149,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
                     ? { ...msg, content, ...(tokens && { tokens }) }
                     : msg
                 ),
+                updatedAt: Date.now(),
               };
             }),
           };
@@ -166,7 +168,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
             ...space,
             conversations: space.conversations.map((conv) => {
               if (conv.id !== conversationId) return conv;
-              return { ...conv, title: newTitle };
+              return { ...conv, title: newTitle, updatedAt: Date.now() };
             }),
           };
         }),
