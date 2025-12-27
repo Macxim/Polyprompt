@@ -1,42 +1,30 @@
-import { kv } from "@vercel/kv";
+import { redis } from "@/lib/redis";
 import { NextResponse } from "next/server";
-import { SharedConversation } from "../../types";
+import { SharedConversation, Agent } from "../../types";
 
 export async function POST(req: Request) {
   try {
     const body = await req.json();
-    const { conversation } = body;
+    const { conversation, agents } = body;
 
     if (!conversation) {
       return NextResponse.json({ error: "Missing conversation data" }, { status: 400 });
     }
 
-    // Generate a secure random ID (or just a timestamp-random mix)
+    // Generate a secure random ID
     const shareId = Math.random().toString(36).substring(2, 10) + Math.random().toString(36).substring(2, 10);
 
-    const sharedData: SharedConversation = {
+    // De-normalize agent data so the public page knows who is speaking
+    // If agents were passed, we use them; otherwise we'll have to rely on what's in the conversation
+    const sharedData: SharedConversation & { agents?: Agent[] } = {
       ...conversation,
       shareId,
       sharedAt: Date.now(),
+      agents: agents || [], // Snapshot of relevant agents
     };
 
-    // Save to KV with 30-day expiration (optional, or permanent)
-    // In production, we assume KV_URL and specific env vars are set.
-    // Locally, this will fail if not connected, so we should handle that gracefully or mock it?
-    // User goal is production deployment, so we write real code.
-
-    // Check if KV is configured
-    if (!process.env.KV_REST_API_URL || !process.env.KV_REST_API_TOKEN) {
-         // Fallback for local testing without "vercel link"
-         // warn user in response
-         console.warn("KV Environment variables missing. Sharing will fail.");
-         // return NextResponse.json({ error: "Database not configured. Please deploy to Vercel." }, { status: 500 });
-         // Actually, let's just let it fail naturally or return mock in dev?
-         // User wants production.
-    }
-
-    await kv.set(`share:${shareId}`, sharedData);
-    // await kv.expire(`share:${shareId}`, 60 * 60 * 24 * 30); // 30 days
+    // Save to Redis (no expiration for persistent links, or set a long one)
+    await redis.set(`share:${shareId}`, JSON.stringify(sharedData));
 
     return NextResponse.json({ shareId });
   } catch (error) {
@@ -46,7 +34,21 @@ export async function POST(req: Request) {
 }
 
 export async function GET(req: Request) {
-    // This route might arguably not be needed if we fetch in the Page Component via Server Components usage of `kv`.
-    // But having an API is flexible.
-    return NextResponse.json({ msg: "Use server components to fetch" });
+    const { searchParams } = new URL(req.url);
+    const id = searchParams.get("id");
+
+    if (!id) {
+        return NextResponse.json({ error: "Missing share ID" }, { status: 400 });
+    }
+
+    try {
+        const data = await redis.get(`share:${id}`);
+        if (!data) {
+            return NextResponse.json({ error: "Not found" }, { status: 404 });
+        }
+
+        return NextResponse.json(typeof data === 'string' ? JSON.parse(data) : data);
+    } catch (error) {
+        return NextResponse.json({ error: "Failed to fetch shared link" }, { status: 500 });
+    }
 }

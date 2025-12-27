@@ -41,26 +41,28 @@ const sizeClasses = {
 };
 
 export default function AvatarDisplay({ agent, size = "md", className = "" }: Props) {
-  const gradient = generateGradient(agent.name);
+  const name = agent?.name || "Agent";
+  const avatar = agent?.avatar;
+  const gradient = generateGradient(name);
   const sizeClass = sizeClasses[size];
-  const initial = agent.name[0]?.toUpperCase() || "A";
+  const initial = name[0]?.toUpperCase() || "A";
 
   // Check if avatar is an emoji (single character or emoji)
-  const isEmoji = agent.avatar && agent.avatar.length <= 2;
+  const isEmoji = avatar && avatar.length <= 2;
 
   // Check if avatar is a URL
-  const isImageUrl = agent.avatar && (
-    agent.avatar.startsWith("http://") ||
-    agent.avatar.startsWith("https://") ||
-    agent.avatar.startsWith("/")
+  const isImageUrl = avatar && (
+    avatar.startsWith("http://") ||
+    avatar.startsWith("https://") ||
+    avatar.startsWith("/")
   );
 
   if (isImageUrl) {
     return (
       <div className={`${sizeClass} rounded-full overflow-hidden ring-2 ring-white shadow-sm ${className}`}>
         <img
-          src={agent.avatar!}
-          alt={`${agent.name} avatar`}
+          src={avatar!}
+          alt={`${name} avatar`}
           className="w-full h-full object-cover"
         />
       </div>
@@ -72,7 +74,7 @@ export default function AvatarDisplay({ agent, size = "md", className = "" }: Pr
       <div
         className={`${sizeClass} rounded-full bg-gradient-to-br ${gradient} flex items-center justify-center shadow-sm ${className}`}
       >
-        <span className="text-white">{agent.avatar}</span>
+        <span className="text-white">{avatar}</span>
       </div>
     );
   }
