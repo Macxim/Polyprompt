@@ -125,23 +125,32 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
   };
 
   return (
-    <div className="my-4 rounded-xl overflow-hidden border border-slate-200 bg-slate-900 group/code">
-      <div className="flex items-center justify-between px-4 py-2 bg-slate-800 border-b border-slate-700">
-        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language}</span>
+    <div className="my-6 rounded-xl overflow-hidden border border-slate-700/50 bg-[#0d1117] group/code shadow-xl">
+      <div className="flex items-center justify-between px-4 py-2.5 bg-[#161b22] border-b border-slate-700/50">
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-red-500/80"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-amber-500/80"></div>
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500/80"></div>
+          </div>
+          <span className="ml-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">{language}</span>
+        </div>
         <button
           onClick={handleCopy}
-          className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-white transition-colors uppercase tracking-wider"
+          className={`flex items-center gap-1.5 px-2 py-1 rounded-md text-[10px] font-bold transition-all uppercase tracking-wider ${
+            copied ? "text-emerald-400 bg-emerald-400/10" : "text-slate-400 hover:text-white hover:bg-slate-700/50"
+          }`}
         >
           {copied ? (
             <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-green-400">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="20 6 9 17 4 12" />
               </svg>
-              <span className="text-green-400">Copied</span>
+              <span>Copied</span>
             </>
           ) : (
             <>
-              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/>
                 <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
               </svg>
@@ -150,8 +159,8 @@ function CodeBlock({ code, language }: { code: string; language: string }) {
           )}
         </button>
       </div>
-      <div className="p-4 overflow-x-auto">
-        <code className={`language-${language} text-slate-300 text-xs leading-relaxed font-mono`}>
+      <div className="p-4 overflow-x-auto custom-scrollbar">
+        <code className={`language-${language} text-indigo-100/90 text-[13px] leading-relaxed font-mono block whitespace-pre`}>
           {code}
         </code>
       </div>

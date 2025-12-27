@@ -17,6 +17,7 @@ export default function SpacePage() {
   const [selectedAgentId, setSelectedAgentId] = useState("");
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newName, setNewName] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
 
   const spaces = state.spaces;
 
@@ -48,12 +49,15 @@ export default function SpacePage() {
   /* ---------------------- ACTIONS ---------------------- */
 
   const handleRename = () => {
+    if (isSaving) return;
     if (newName.trim() && newName !== space.name) {
+      setIsSaving(true);
       dispatch({
         type: "UPDATE_SPACE",
         id: space.id,
         changes: { name: newName.trim() },
       });
+      setTimeout(() => setIsSaving(false), 100);
     }
     setIsEditing(false);
   };
@@ -181,7 +185,10 @@ export default function SpacePage() {
                     {space.name}
                   </h1>
                   <button
-                    onClick={() => setIsEditing(true)}
+                    onClick={() => {
+                      setNewName(space.name);
+                      setIsEditing(true);
+                    }}
                     className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-500 transition-all"
                     title="Rename Space"
                   >
@@ -193,13 +200,6 @@ export default function SpacePage() {
               )}
               <p className="text-slate-500 mt-2 text-sm">ID: {space.id}</p>
             </div>
-
-            <button
-              onClick={deleteSpace}
-              className="text-red-400 hover:text-red-600 text-sm font-medium hover:underline transition-colors"
-            >
-              Delete Space
-            </button>
           </div>
         </div>
 
@@ -342,9 +342,7 @@ export default function SpacePage() {
                 onClick={addConversation}
               >
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path d="M5.433 13.917l1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3L10.58 12.42a4 4 0 0 1-1.343.885L6.1 14.68a.3.3 0 0 1-.366-.366l.8-2.617a.4.4 0 0 1 .108-.198.398.398 0 0 1 .195-.106l-1.404 2.524z" />
-                   {/* Simplified chat icon */}
-                   <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7s3.582 7 8 7c.484 0 .956-.038 1.413-.111l2.978 1.654a1 1 0 0 0 1.442-1.085l-.364-2.181C16.892 12.793 18 10.982 18 9c0-3.866-3.582-7-8-7z" clipRule="evenodd" />
+                  <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7s3.582 7 8 7c.484 0 .956-.038 1.413-.111l2.978 1.654a1 1 0 0 0 1.442-1.085l-.364-2.181C16.892 12.793 18 10.982 18 9c0-3.866-3.582-7-8-7z" clipRule="evenodd" />
                 </svg>
                 New Chat
               </button>
@@ -426,6 +424,35 @@ export default function SpacePage() {
         />
 
         <ConversationModal spaceId={spaceId} />
+
+        {/* Danger Zone */}
+        <div className="mt-16 pt-8 border-t border-slate-200">
+          <div className="bg-red-50/50 border border-red-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
+            <div className="flex items-center gap-4 text-center md:text-left">
+              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shadow-sm shrink-0">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
+                  <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clipRule="evenodd" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="text-lg font-bold text-red-700">Danger Zone</h3>
+                <p className="text-red-500/80 text-sm mt-0.5">
+                  Deleting a space is permanent and will remove all conversations and agent associations.
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => {
+                if (confirm(`Are you absolutely sure you want to delete "${space.name}"? This action cannot be undone.`)) {
+                  deleteSpace();
+                }
+              }}
+              className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm active:scale-95 shrink-0"
+            >
+              Delete this Space
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );

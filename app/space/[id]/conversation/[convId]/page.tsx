@@ -30,6 +30,7 @@ export default function ConversationPage() {
   const [isAutoMode, setIsAutoMode] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
+  const [shareCopied, setShareCopied] = useState(false);
   const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -716,6 +717,8 @@ export default function ConversationPage() {
         const url = `${window.location.origin}/share/${shareId}`;
 
         await navigator.clipboard.writeText(url);
+        setShareCopied(true);
+        setTimeout(() => setShareCopied(false), 2000);
         dispatch({ type: "SET_BANNER", payload: { message: "Link copied to clipboard!", type: "success" } });
     } catch (e: any) {
         console.error("Share error", e);
@@ -781,13 +784,21 @@ export default function ConversationPage() {
            <button
              onClick={handleShare}
              disabled={isSharing}
-             className="p-2 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors"
-             title="Share Public Link"
+             className={`p-2 rounded-lg transition-all ${
+               shareCopied
+                 ? "text-emerald-600 bg-emerald-50 border border-emerald-200"
+                 : "text-slate-400 hover:text-indigo-600 hover:bg-white border border-transparent shadow-sm hover:shadow"
+             }`}
+             title={shareCopied ? "Link Copied!" : "Share Public Link"}
            >
               {isSharing ? (
                 <svg className="animate-spin h-5 w-5" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                   <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
                   <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+              ) : shareCopied ? (
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 animate-in zoom-in duration-200">
+                  <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
                 </svg>
               ) : (
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
@@ -1118,30 +1129,30 @@ export default function ConversationPage() {
                     }
                 }}
                 disabled={isTyping && !isAutoMode}
-                className={`p-2 rounded-full flex items-center justify-center gap-2 font-medium min-w-[120px] px-3 py-1.5 transition-all relative ${
+                className={`p-2 rounded-full flex items-center justify-center gap-2 font-bold min-w-[120px] px-4 py-2 transition-all relative overflow-hidden group/auto ${
                   isAutoMode
-                    ? "animate-pulse text-red-600 bg-red-50 border border-red-500"
+                    ? "bg-red-500 text-white shadow-lg shadow-red-200 hover:bg-red-600"
                     : isAutoPrimed
-                      ? "text-indigo-600 bg-indigo-50 border border-indigo-400 shadow-[0_0_10px_rgba(79,70,229,0.2)]"
-                      : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200"
+                      ? "bg-indigo-600 text-white shadow-[0_0_20px_rgba(79,70,229,0.4)] animate-pulse-gentle"
+                      : "text-slate-500 hover:text-indigo-600 hover:bg-slate-200/50"
                 }`}
                 title={isAutoMode ? "Stop Auto Mode" : isAutoPrimed ? "Auto-Mode Primed (Click to disable)" : "Start Auto Discussion"}
               >
                {isAutoMode ? (
                 <>
-                  <svg className="h-5 w-5 text-red-500" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
+                  <svg className="h-5 w-5 text-white animate-pulse" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
                     <path fillRule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clipRule="evenodd" />
                   </svg>
-                  <span>Stop</span>
+                  <span className="uppercase tracking-wider text-xs">Stop Discuss</span>
                 </>
                ) : (
                 <>
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 ${isAutoPrimed ? "animate-spin-slow text-indigo-500" : ""}`}>
+                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 transition-transform duration-500 ${isAutoPrimed ? "rotate-90 scale-110" : "group-hover/auto:rotate-12"}`}>
                    <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
                  </svg>
-                 <span>{isAutoPrimed ? "Discuss" : "Auto"}</span>
+                 <span className="uppercase tracking-wider text-xs">{isAutoPrimed ? "Discuss" : "Auto"}</span>
                  {isAutoPrimed && (
-                   <span className="absolute -top-2 -right-1 bg-indigo-600 text-white text-[9px] px-1.5 py-0.5 rounded-full uppercase font-bold tracking-tighter">
+                   <span className="absolute -top-1 -right-0 bg-amber-400 text-indigo-900 text-[8px] px-1.5 py-0.5 rounded-full uppercase font-black tracking-tighter leading-none shadow-sm">
                      {autoModeType}
                    </span>
                  )}
