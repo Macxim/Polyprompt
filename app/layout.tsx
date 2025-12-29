@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter, Outfit } from "next/font/google";
 import { AppProvider } from "./state/AppProvider";
+import { AuthProvider } from "./providers/AuthProvider";
 
 import "./globals.css";
 
@@ -29,9 +30,11 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-slate-50 relative flex h-screen overflow-hidden`}>
-        <AppProvider>
-          <SidebarLayout>{children}</SidebarLayout>
-        </AppProvider>
+        <AuthProvider>
+          <AppProvider>
+            <SidebarLayout>{children}</SidebarLayout>
+          </AppProvider>
+        </AuthProvider>
       </body>
     </html>
   );

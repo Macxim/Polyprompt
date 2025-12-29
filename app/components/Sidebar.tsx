@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useApp } from "../state/AppProvider";
 import { useMemo } from "react";
+import UserMenu from "./UserMenu";
 
 export default function Sidebar() {
   const { state, dispatch } = useApp();
@@ -132,15 +133,7 @@ export default function Sidebar() {
         </div>
 
         <div className="p-4 border-t border-slate-100">
-          <div className="flex items-center gap-3 p-2 rounded-lg hover:bg-slate-50 transition-colors cursor-pointer group">
-            <div className="w-8 h-8 rounded-full bg-slate-200 flex items-center justify-center text-slate-500 group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-              <UserIcon />
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-slate-700 truncate">User</p>
-              <p className="text-xs text-slate-400 truncate">Settings</p>
-            </div>
-          </div>
+          <UserMenu />
         </div>
         </div>
       </aside>
