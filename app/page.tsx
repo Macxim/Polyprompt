@@ -121,7 +121,18 @@ export default function Home() {
 
         {/* List spaces */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {state.spaces.map((space) => (
+          {!state._hydrated ? (
+            // Loading Skeletons
+            [1, 2, 3, 4].map((i) => (
+              <div key={i} className="bg-white p-6 rounded-xl border border-slate-100 shadow-sm animate-pulse h-[108px]">
+                <div className="h-6 bg-slate-100 rounded w-3/4 mb-4"></div>
+                <div className="flex gap-4">
+                  <div className="h-4 bg-slate-50 rounded w-20"></div>
+                  <div className="h-4 bg-slate-50 rounded w-20"></div>
+                </div>
+              </div>
+            ))
+          ) : state.spaces.map((space) => (
             <Link key={space.id} href={`/space/${space.id}`}>
               <div className="group bg-white p-6 rounded-xl border border-slate-200 shadow-sm hover:shadow-xl hover:border-blue-300 transition-all cursor-pointer h-full relative overflow-hidden">
                 <div className="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"></div>

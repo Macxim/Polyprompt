@@ -101,7 +101,18 @@ export default function Sidebar() {
              Recent Chats
            </h3>
            <div className="space-y-1">
-             {recentChats.length === 0 ? (
+             {!state._hydrated ? (
+               // Loading Skeleton
+               [1, 2, 3].map((i) => (
+                 <div key={i} className="px-3 py-3 rounded-lg border border-transparent animate-pulse">
+                   <div className="flex items-center gap-2 mb-2">
+                     <div className="w-4 h-4 rounded bg-slate-100"></div>
+                     <div className="h-3 bg-slate-100 rounded w-24"></div>
+                   </div>
+                   <div className="h-2 bg-slate-50 rounded w-16 ml-6"></div>
+                 </div>
+               ))
+             ) : recentChats.length === 0 ? (
                <p className="text-[11px] text-slate-400 italic px-3 py-2">No recent chats yet.</p>
              ) : (
                recentChats.map((chat) => (
