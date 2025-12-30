@@ -5,10 +5,12 @@ import { usePathname } from "next/navigation";
 import { useApp } from "../state/AppProvider";
 import { useMemo } from "react";
 import UserMenu from "./UserMenu";
+import { useSession } from "next-auth/react";
 
 export default function Sidebar() {
   const { state, dispatch } = useApp();
   const pathname = usePathname();
+  const { data: session } = useSession();
 
   const closeSidebar = () => {
     dispatch({ type: "SET_SIDEBAR_OPEN", payload: false });
@@ -96,52 +98,54 @@ export default function Sidebar() {
           </nav>
         </div>
 
-        <div className="flex-1 overflow-y-auto px-6 py-4 border-t border-slate-50">
-           <h3 className="text-xs ml-3 font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
-             Recent Chats
-           </h3>
-           <div className="space-y-1">
-             {!state._hydrated ? (
-               // Loading Skeleton
-               [1, 2, 3].map((i) => (
-                 <div key={i} className="px-3 py-3 rounded-lg border border-transparent animate-pulse">
-                   <div className="flex items-center gap-2 mb-2">
-                     <div className="w-4 h-4 rounded bg-slate-100"></div>
-                     <div className="h-3 bg-slate-100 rounded w-24"></div>
+        {session && (
+          <div className="flex-1 overflow-y-auto px-6 py-4 border-t border-slate-50">
+             <h3 className="text-xs ml-3 font-extrabold text-slate-400 uppercase tracking-widest mb-4 flex items-center gap-2">
+               Recent Chats
+             </h3>
+             <div className="space-y-1">
+               {!state._hydrated ? (
+                 // Loading Skeleton
+                 [1, 2, 3].map((i) => (
+                   <div key={i} className="px-3 py-3 rounded-lg border border-transparent animate-pulse">
+                     <div className="flex items-center gap-2 mb-2">
+                       <div className="w-4 h-4 rounded bg-slate-100"></div>
+                       <div className="h-3 bg-slate-100 rounded w-24"></div>
+                     </div>
+                     <div className="h-2 bg-slate-50 rounded w-16 ml-6"></div>
                    </div>
-                   <div className="h-2 bg-slate-50 rounded w-16 ml-6"></div>
-                 </div>
-               ))
-             ) : recentChats.length === 0 ? (
-               <p className="text-[11px] text-slate-400 italic px-3 py-2">No recent chats yet.</p>
-             ) : (
-               recentChats.map((chat) => (
-                 <Link
-                   key={chat.id}
-                   href={`/space/${chat.spaceId}/conversation/${chat.id}`}
-                   onClick={closeSidebar}
-                   className={`flex flex-col px-3 py-2 rounded-lg transition-all group ${
-                     pathname === `/space/${chat.spaceId}/conversation/${chat.id}`
-                       ? "bg-indigo-50/80 border border-indigo-100 shadow-sm"
-                       : "hover:bg-slate-50 border border-transparent"
-                   }`}
-                 >
-                   <div className="flex items-center gap-2">
-                     <span className="text-sm">💬</span>
-                     <span className={`text-xs font-bold truncate flex-1 ${
-                       pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
-                     }`}>
-                       {chat.title}
+                 ))
+               ) : recentChats.length === 0 ? (
+                 <p className="text-[11px] text-slate-400 italic px-3 py-2">No recent chats yet.</p>
+               ) : (
+                 recentChats.map((chat) => (
+                   <Link
+                     key={chat.id}
+                     href={`/space/${chat.spaceId}/conversation/${chat.id}`}
+                     onClick={closeSidebar}
+                     className={`flex flex-col px-3 py-2 rounded-lg transition-all group ${
+                       pathname === `/space/${chat.spaceId}/conversation/${chat.id}`
+                         ? "bg-indigo-50/80 border border-indigo-100 shadow-sm"
+                         : "hover:bg-slate-50 border border-transparent"
+                     }`}
+                   >
+                     <div className="flex items-center gap-2">
+                       <span className="text-sm">💬</span>
+                       <span className={`text-xs font-bold truncate flex-1 ${
+                         pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
+                       }`}>
+                         {chat.title}
+                       </span>
+                     </div>
+                     <span className="text-[10px] text-slate-400 ml-6 truncate">
+                       {chat.spaceName}
                      </span>
-                   </div>
-                   <span className="text-[10px] text-slate-400 ml-6 truncate">
-                     {chat.spaceName}
-                   </span>
-                 </Link>
-               ))
-             )}
-           </div>
-        </div>
+                   </Link>
+                 ))
+               )}
+             </div>
+          </div>
+        )}
 
         <div className="p-4 border-t border-slate-100">
           <UserMenu />
