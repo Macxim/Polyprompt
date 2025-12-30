@@ -12,4 +12,20 @@ if (!redis.isOpen) {
   redis.connect().catch(console.error);
 }
 
+// Key helpers
+export const keys = {
+  agents: (userId: string) => `user:${userId}:agents`,
+  spaces: (userId: string) => `user:${userId}:spaces`,
+};
+
+// Data helpers
+export const getUserData = async <T>(key: string): Promise<T[]> => {
+  const data = await redis.get(key);
+  return data ? JSON.parse(data) : [];
+};
+
+export const setUserData = async <T>(key: string, data: T[]): Promise<void> => {
+  await redis.set(key, JSON.stringify(data));
+};
+
 export default redis;

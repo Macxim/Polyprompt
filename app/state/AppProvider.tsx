@@ -10,6 +10,7 @@ import React, {
 import { AppState, initialAppState } from "./appState";
 import { reducer } from "./reducer";
 import { Action } from "./actions";
+import { useSession } from "next-auth/react";
 
 // Define the shape of the context
 type AppContextType = {
@@ -22,34 +23,118 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Provider component
 export const AppProvider = ({ children }: { children: ReactNode }) => {
+  const { data: session, status } = useSession();
   const [state, dispatch] = useReducer(reducer, initialAppState);
 
-  // Hydrate state from localStorage once on mount
+  // Sync with API or localStorage
   useEffect(() => {
-    const savedState = localStorage.getItem("appState");
-    if (savedState) {
-      try {
-        const parsedState: AppState = JSON.parse(savedState);
-        dispatch({ type: "HYDRATE_APP", payload: parsedState });
-      } catch (err) {
-        console.error("Failed to parse saved app state", err);
-        // If parsing fails, treat as empty session
-        dispatch({ type: "HYDRATE_APP", payload: initialAppState });
+    const syncData = async () => {
+      // 1. Check if we have localStorage data to migrate
+      const savedState = localStorage.getItem("appState");
+      let localState: AppState | null = null;
+      if (savedState) {
+        try {
+          localState = JSON.parse(savedState);
+        } catch (err) {
+          console.error("Failed to parse local app state", err);
+        }
       }
-    } else {
-      // No saved state found (first visit or cleared cache)
-      // We must mark as hydrated so future changes are saved
-      dispatch({ type: "HYDRATE_APP", payload: initialAppState });
-    }
-  }, []);
 
-  // Persist state to localStorage whenever it changes
+      if (status === "authenticated" && session?.user?.id) {
+        // 2. Fetch from API
+        try {
+          const [agentsRes, spacesRes] = await Promise.all([
+            fetch("/api/agents"),
+            fetch("/api/spaces"),
+          ]);
+
+          if (!agentsRes.ok || !spacesRes.ok) {
+            console.error("API response error:", agentsRes.status, spacesRes.status);
+            return;
+          }
+
+          const agents = await agentsRes.json();
+          const spaces = await spacesRes.json();
+
+          // 3. Migration logic: If local state has data but API is "fresh" (only default agents),
+          // we might want to push local data to API.
+          // For simplicity, if local data exists, we merge/push it once.
+          if (localState && (localState.agents.length > 0 || localState.spaces.length > 0)) {
+            // Push local data to API
+            await Promise.all([
+              fetch("/api/agents", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(localState.agents),
+              }),
+              fetch("/api/spaces", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(localState.spaces),
+              }),
+            ]);
+
+            // Clear local storage after successful migration
+            localStorage.removeItem("appState");
+
+            dispatch({
+              type: "HYDRATE_APP",
+              payload: { ...initialAppState, agents: localState.agents, spaces: localState.spaces }
+            });
+          } else {
+            dispatch({
+              type: "HYDRATE_APP",
+              payload: { ...initialAppState, agents, spaces }
+            });
+          }
+        } catch (err) {
+          console.error("Failed to sync with API", err);
+        }
+      } else if (status === "unauthenticated") {
+        // 4. Fallback to localStorage if not logged in (or first visit)
+        if (localState) {
+          dispatch({ type: "HYDRATE_APP", payload: localState });
+        } else {
+          dispatch({ type: "HYDRATE_APP", payload: initialAppState });
+        }
+      }
+    };
+
+    if (status !== "loading") {
+      syncData();
+    }
+  }, [status, session?.user?.id]);
+
+  // Persist state changes
   useEffect(() => {
-    // Avoid saving the initial empty state before HYDRATE
-    if (state._hydrated) {
+    if (!state._hydrated) return;
+
+    if (status === "authenticated" && session?.user?.id) {
+      // Debounce API calls
+      const timer = setTimeout(async () => {
+        try {
+          await Promise.all([
+            fetch("/api/agents", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(state.agents),
+            }),
+            fetch("/api/spaces", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify(state.spaces),
+            }),
+          ]);
+        } catch (err) {
+          console.error("Failed to auto-sync to API", err);
+        }
+      }, 1000); // 1 second debounce
+
+      return () => clearTimeout(timer);
+    } else {
       localStorage.setItem("appState", JSON.stringify(state));
     }
-  }, [state]);
+  }, [state, status, session?.user?.id]);
 
   return (
     <AppContext.Provider value={{ state, dispatch }}>
