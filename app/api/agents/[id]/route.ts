@@ -6,7 +6,7 @@ import { Agent } from "@/app/types";
 
 export async function DELETE(
   req: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.id) {
@@ -15,7 +15,7 @@ export async function DELETE(
 
   const userId = session.user.id;
   const key = keys.agents(userId);
-  const { id } = params;
+  const { id } = await params;
 
   const agents = await getUserData<Agent>(key);
   const filteredAgents = agents.filter((a) => a.id !== id);

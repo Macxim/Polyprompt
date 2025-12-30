@@ -18,7 +18,7 @@ async function getSharedConversation(id: string) {
   }
 }
 
-export default async function SharePage({ params }: { params: { id: string } }) {
+export default async function SharePage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const sharedData = await getSharedConversation(id);
 
