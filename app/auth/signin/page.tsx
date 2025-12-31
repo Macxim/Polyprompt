@@ -57,7 +57,9 @@ function SignInForm() {
            setIsRegistering(false)
            setError("Registration successful. Please sign in.")
         } else {
-           router.push(callbackUrl)
+           // Force full page reload to ensure session cookies are set correctly
+           window.location.href = callbackUrl
+
         }
 
       } else {
@@ -72,7 +74,9 @@ function SignInForm() {
           throw new Error("Invalid email or password")
         }
 
-        router.push(callbackUrl)
+        // Force full page reload to ensure session cookies are set correctly
+        window.location.href = callbackUrl
+
       }
     } catch (err: any) {
       setError(err.message)
