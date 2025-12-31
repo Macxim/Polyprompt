@@ -22,7 +22,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "😈",
     temperature: 0.8,
     isDefault: true,
-    verbosity: 'balanced',
+    verbosity: 'concise',
   },
   {
     id: "creative_ideator",
@@ -44,6 +44,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "⚖️",
     temperature: 0.5,
     isDefault: true,
+    verbosity: 'concise',
   },
   {
     id: "research_synthesizer",
@@ -54,7 +55,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "📚",
     temperature: 0.4,
     isDefault: true,
-    verbosity: 'detailed',
+    verbosity: 'concise',
   },
 
   // Specialized Agents
@@ -67,6 +68,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "💻",
     temperature: 0.3,
     isDefault: true,
+    verbosity: 'concise',
   },
   {
     id: "financial_advisor",
@@ -77,6 +79,7 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "💰",
     temperature: 0.2,
     isDefault: true,
+    verbosity: 'concise',
   },
   {
     id: "empathy_coach",
@@ -87,5 +90,6 @@ export const DEFAULT_AGENTS: Agent[] = [
     avatar: "💚",
     temperature: 0.7,
     isDefault: true,
+    verbosity: 'concise',
   },
 ];
