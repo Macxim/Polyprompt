@@ -57,8 +57,6 @@ export const reducer = (state: AppState, action: Action): AppState => {
           "strategic_analyst",
           "devils_advocate",
           "creative_ideator",
-          "practical_realist",
-          "research_synthesizer",
         ];
 
         // Ensure we only add agents that actually exist in the state
