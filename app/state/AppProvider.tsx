@@ -50,31 +50,39 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
           if (!agentsRes.ok || !spacesRes.ok) {
             console.error("API response error:", agentsRes.status, spacesRes.status);
+            // Hydrate with empty/default if API fails, so UI doesn't hang
+            dispatch({
+              type: "HYDRATE_APP",
+              payload: { ...initialAppState, agents: initialAppState.agents, spaces: [] }
+            });
             return;
           }
 
+          // ... existing code ...
           const agents = await agentsRes.json();
           const spaces = await spacesRes.json();
 
-          // 3. Migration logic: If local state has data but API is "fresh" (only default agents),
-          // we might want to push local data to API.
-          // For simplicity, if local data exists, we merge/push it once.
+          // 3. Migration logic
           if (localState && (localState.agents.length > 0 || localState.spaces.length > 0)) {
             // Push local data to API
-            await Promise.all([
-              fetch("/api/agents", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(localState.agents),
-              }),
-              fetch("/api/spaces", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(localState.spaces),
-              }),
-            ]);
+            try {
+                await Promise.all([
+                fetch("/api/agents", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(localState.agents),
+                }),
+                fetch("/api/spaces", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify(localState.spaces),
+                }),
+                ]);
+            } catch (e) {
+                console.error("Migration failed", e);
+            }
 
-            // Clear local storage after successful migration
+            // Clear local storage after successful migration (or attempt)
             localStorage.removeItem("appState");
 
             dispatch({
@@ -89,6 +97,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           }
         } catch (err) {
           console.error("Failed to sync with API", err);
+          // Fallback to initial state so app doesn't hang
+          dispatch({ type: "HYDRATE_APP", payload: initialAppState });
         }
       } else if (status === "unauthenticated") {
         // 4. Fallback to localStorage if not logged in (or first visit)

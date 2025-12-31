@@ -494,7 +494,13 @@ export default function ConversationPage() {
         }),
       });
 
-      if (!planRes.ok) throw new Error("Failed to plan discussion");
+      if (!planRes.ok) {
+        if (planRes.status === 403) {
+             const errorData = await planRes.json();
+             throw new Error(errorData.message || "API Key Required");
+        }
+        throw new Error("Failed to plan discussion");
+      }
       const { plan: generatedPlan } = await planRes.json();
 
       if (!generatedPlan || generatedPlan.length === 0) {
@@ -1014,7 +1020,7 @@ export default function ConversationPage() {
           >
             {hasNewMessages ? (
               <>
-                <span className="whitespace-nowrap tracking-tight">New Messages</span>
+                <span className="whitespace-nowrap tracking-tight">New messages</span>
                 <ArrowDown className="w-4 h-4" />
               </>
             ) : (
