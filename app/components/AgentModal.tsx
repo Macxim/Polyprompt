@@ -110,7 +110,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4">
-      <div className="bg-white p-8 rounded-2xl w-full max-w-4xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white p-8 rounded-3xl w-full max-w-4xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] overflow-y-auto">
         <h2 className="text-2xl font-bold text-slate-900 mb-8 border-b border-slate-100 pb-4">
           {activeAgent ? "Edit Agent" : "Create New Agent"}
         </h2>
@@ -366,7 +366,7 @@ export default function AgentModal({ onAgentCreated }: Props) {
           </button>
           <button
             onClick={handleSubmit}
-            className="px-8 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all active:scale-95"
+            className="px-8 py-2.5 bg-indigo-600 text-white rounded-2xl font-bold hover:bg-indigo-700 shadow-md hover:shadow-lg transition-all active:scale-95"
           >
             {activeAgent ? "Save Changes" : "Create Agent"}
           </button>

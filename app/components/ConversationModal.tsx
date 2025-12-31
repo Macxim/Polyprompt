@@ -178,7 +178,7 @@ export default function ConversationModal({ spaceId }: Props) {
 
   return (
     <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-2xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
+      <div className="bg-white rounded-3xl w-full max-w-2xl shadow-2xl animate-in fade-in zoom-in-95 duration-200 max-h-[90vh] flex flex-col overflow-hidden">
 
         {/* Header */}
         <div className="p-6 border-b border-slate-100 flex justify-between items-center">
@@ -205,7 +205,7 @@ export default function ConversationModal({ spaceId }: Props) {
                   <button
                     key={template.id}
                     onClick={() => handleStartTemplate(template)}
-                    className="flex flex-col items-start p-4 rounded-xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-md transition-all text-left bg-white group"
+                    className="flex flex-col items-start p-4 rounded-2xl border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50/50 hover:shadow-md transition-all text-left bg-white group"
                   >
                     <div className="flex items-center gap-2 mb-2 w-full">
                       <span className="text-2xl group-hover:scale-110 transition-transform">{template.icon}</span>

@@ -5,6 +5,7 @@ import AgentCard from "./components/AgentCard";
 import AgentModal from "../components/AgentModal";
 import Banner from "../components/Banner";
 import { useApp } from "../state/AppProvider";
+import { Plus, Users, Sparkles } from "lucide-react";
 
 export default function AgentsPage() {
   const { state, dispatch } = useApp();
@@ -96,9 +97,7 @@ export default function AgentsPage() {
             onClick={openCreateModal}
             className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-5 py-2.5 rounded-xl shadow-lg shadow-indigo-200 hover:shadow-indigo-300 transition-all active:scale-95 flex items-center gap-2"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-            </svg>
+            <Plus className="w-5 h-5" />
             New Agent
           </button>
         </div>
@@ -109,7 +108,7 @@ export default function AgentsPage() {
               <div className="h-6 bg-slate-100 rounded w-48 mb-6"></div>
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-[180px] bg-slate-50 border border-slate-100 rounded-2xl animate-pulse"></div>
+                  <div key={i} className="glass-card h-[180px] bg-slate-50/50 border border-slate-200/60 rounded-3xl animate-pulse"></div>
                 ))}
               </div>
             </section>
@@ -117,7 +116,7 @@ export default function AgentsPage() {
               <div className="h-6 bg-slate-100 rounded w-48 mb-6"></div>
               <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
                 {[1, 2, 3].map(i => (
-                  <div key={i} className="h-[140px] bg-slate-50 border border-slate-100 rounded-2xl animate-pulse"></div>
+                  <div key={i} className="glass-card h-[140px] bg-slate-50/50 border border-slate-200/60 rounded-3xl animate-pulse"></div>
                 ))}
               </div>
             </section>
@@ -128,7 +127,7 @@ export default function AgentsPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
                 <span className="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5"><path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z"></path></svg>
+                  <Users className="w-5 h-5" />
                 </span>
                 Custom Agents
                 <span className="text-sm font-normal text-slate-400 ml-2">({customAgents.length})</span>
@@ -157,9 +156,7 @@ export default function AgentsPage() {
             <section>
               <h2 className="text-xl font-bold text-slate-700 mb-6 flex items-center gap-2">
                 <span className="bg-amber-100 text-amber-600 p-1.5 rounded-lg">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                    <path fillRule="evenodd" d="M10 1a4.5 4.5 0 0 0-4.5 4.5V9H5a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-6a2 2 0 0 0-2-2h-.5V5.5A4.5 4.5 0 0 0 10 1Zm3 8V5.5a3 3 0 1 0-6 0V9h6Z" clipRule="evenodd" />
-                  </svg>
+                  <Sparkles className="w-5 h-5" />
                 </span>
                 Default Agents
                 <span className="text-sm font-normal text-slate-400 ml-2">({defaultAgents.length})</span>

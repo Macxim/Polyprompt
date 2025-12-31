@@ -9,6 +9,23 @@ import AvatarDisplay from "@/app/components/AvatarDisplay";
 import ThinkingIndicator from "@/app/components/ThinkingIndicator";
 import AutoModeModal from "@/app/components/AutoModeModal";
 import ChatMessage from "@/app/components/ChatMessage";
+import {
+  Key,
+  Send,
+  Sparkles,
+  Share2,
+  Download,
+  Trash2,
+  ArrowDown,
+  ArrowLeft,
+  Check,
+  Loader2,
+  ChevronDown,
+  FileText,
+  FileJson,
+  Type,
+  Square
+} from "lucide-react";
 
 export default function ConversationPage() {
   const { state, dispatch } = useApp();
@@ -31,6 +48,7 @@ export default function ConversationPage() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
+  const [hasApiKey, setHasApiKey] = useState<boolean>(true); // Default to true to avoid flash
   const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -59,11 +77,19 @@ export default function ConversationPage() {
     if (!showScrollButton) {
       const behavior = isTyping || isAutoMode ? "auto" : "smooth";
       messagesEndRef.current?.scrollIntoView({ behavior });
-      setHasNewMessages(false);
+      // Only set to false if it's currently true to avoid redundant updates
+      setHasNewMessages(prev => {
+        if (prev !== false) return false;
+        return prev;
+      });
     } else if (conversation?.messages) {
-      setHasNewMessages(prev => (prev !== true ? true : prev));
+      // Only set to true if it's currently false
+      setHasNewMessages(prev => {
+        if (prev !== true) return true;
+        return prev;
+      });
     }
-  }, [conversation?.messages, isTyping, isAutoMode, showScrollButton]);
+  }, [conversation?.messages?.length, isTyping, isAutoMode, showScrollButton]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -106,6 +132,22 @@ export default function ConversationPage() {
 
     // Auto-focus input
     inputRef.current?.focus();
+  }, []);
+
+  // Check if user has an API key
+  useEffect(() => {
+    const checkApiKey = async () => {
+      try {
+        const res = await fetch("/api/user/settings");
+        if (res.ok) {
+          const data = await res.json();
+          setHasApiKey(data.hasApiKey);
+        }
+      } catch (err) {
+        console.error("Failed to check API key:", err);
+      }
+    };
+    checkApiKey();
   }, []);
 
   // Keyboard Shortcuts
@@ -177,6 +219,8 @@ export default function ConversationPage() {
     if (!messageContent) return;
 
     setNewMessage(""); // Clear immediately for better UX
+
+    // Reset typing mode/auto-mode flags handled by state
     // Reset height
     if (inputRef.current) {
         inputRef.current.style.height = 'auto';
@@ -285,6 +329,10 @@ export default function ConversationPage() {
         });
 
         if (!res.ok) {
+          if (res.status === 403) {
+             const errorData = await res.json();
+             throw new Error(errorData.message || "API Key Required");
+          }
           throw new Error(`API error: ${res.status}`);
         }
 
@@ -320,16 +368,20 @@ export default function ConversationPage() {
             streamedContent += chunk;
           }
 
-          // Update the message content
-          dispatch({
-            type: "UPDATE_MESSAGE",
-            payload: {
-              spaceId,
-              conversationId: convId,
-              messageId: agentMsgId,
-              content: streamedContent,
-            },
-          });
+          // Buffer updates: only dispatch if we have a significant amount of content
+          // or if it's been a while since the last update.
+          // For simplicity and smoother UI, we'll dispatch every ~5 chunks or on sentence break
+          if (streamedContent.length % 5 === 0 || streamedContent.endsWith('.') || streamedContent.endsWith('\n')) {
+            dispatch({
+              type: "UPDATE_MESSAGE",
+              payload: {
+                spaceId,
+                conversationId: convId,
+                messageId: agentMsgId,
+                content: streamedContent,
+              },
+            });
+          }
         }
 
         // Mark streaming as complete with token data
@@ -543,7 +595,13 @@ export default function ConversationPage() {
             }),
           });
 
-          if (!res.ok || !res.body) throw new Error("Chat API failed");
+          if (!res.ok || !res.body) {
+            if (res.status === 403) {
+              const errorData = await res.json();
+              throw new Error(errorData.message || "API Key Required");
+            }
+            throw new Error("Chat API failed");
+          }
 
           const reader = res.body.getReader();
           const decoder = new TextDecoder();
@@ -571,10 +629,12 @@ export default function ConversationPage() {
               streamedContent += chunk;
             }
 
-            dispatch({
-              type: "UPDATE_MESSAGE",
-              payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent },
-            });
+            if (streamedContent.length % 5 === 0 || streamedContent.endsWith('.') || streamedContent.endsWith('\n')) {
+              dispatch({
+                type: "UPDATE_MESSAGE",
+                payload: { spaceId, conversationId: convId, messageId: agentMsgId, content: streamedContent },
+              });
+            }
           }
 
           // Finalize message
@@ -756,9 +816,7 @@ export default function ConversationPage() {
             className="p-2 -ml-2 rounded-full hover:bg-slate-100/80 text-slate-500 transition-colors"
             title="Back to Space"
           >
-             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-              <path fillRule="evenodd" d="M17 10a.75.75 0 0 1-.75.75H5.612l4.158 3.96a.75.75 0 1 1-1.04 1.08l-5.5-5.25a.75.75 0 0 1 0-1.08l5.5-5.25a.75.75 0 1 1 1.04 1.08L5.612 9.25H16.25A.75.75 0 0 1 17 10Z" clipRule="evenodd" />
-            </svg>
+             <ArrowLeft className="w-5 h-5" />
           </button>
 
           <div className="flex-1 min-w-0">
@@ -809,18 +867,11 @@ export default function ConversationPage() {
             }`}
           >
             {isSharing ? (
-              <svg className="h-4 w-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-              </svg>
+              <Loader2 className="h-4 w-4 animate-spin" />
             ) : shareCopied ? (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4 animate-in zoom-in duration-200">
-                <path fillRule="evenodd" d="M19.916 4.626a.75.75 0 0 1 .208 1.04l-9 13.5a.75.75 0 0 1-1.154.114l-6-6a.75.75 0 0 1 1.06-1.06l5.353 5.353 8.493-12.739a.75.75 0 0 1 1.04-.208Z" clipRule="evenodd" />
-              </svg>
+              <Check className="w-4 h-4 animate-in zoom-in duration-200" />
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                <path fillRule="evenodd" d="M15.75 4.5a3 3 0 1 1 .825 2.066l-8.421 4.679a3.002 3.002 0 0 1 0 1.51l8.421 4.679a3 3 0 1 1-.729 1.31l-8.421-4.678a3 3 0 1 1 0-4.132l8.421-4.679a3 3 0 0 1-.096-.755Z" clipRule="evenodd" />
-              </svg>
+              <Share2 className="w-4 h-4" />
             )}
             <span>{shareCopied ? "Copied" : "Share"}</span>
           </button>
@@ -830,10 +881,7 @@ export default function ConversationPage() {
               onClick={() => setShowExportMenu(!showExportMenu)}
               className={`px-3 py-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-2 font-medium text-sm ${showExportMenu ? 'bg-indigo-50 text-indigo-600' : ''}`}
             >
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                <path d="M10.75 2.75a.75.75 0 0 0-1.5 0v8.614L6.295 8.235a.75.75 0 1 0-1.09 1.03l4.25 4.5a.75.75 0 0 0 1.09 0l4.25-4.5a.75.75 0 0 0-1.09-1.03l-2.955 3.129V2.75Z" />
-                <path d="M3.5 12.75a.75.75 0 0 0-1.5 0v2.5A2.75 2.75 0 0 0 4.75 18h10.5A2.75 2.75 0 0 0 18 15.25v-2.5a.75.75 0 0 0-1.5 0v2.5c0 .69-.56 1.25-1.25 1.25H4.75c-.69 0-1.25-.56-1.25-1.25v-2.5Z" />
-              </svg>
+               <Download className="w-4 h-4" />
               <span>Export</span>
             </button>
 
@@ -843,21 +891,21 @@ export default function ConversationPage() {
                   onClick={exportAsMarkdown}
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
-                  <span>📝</span>
+                  <FileText className="w-4 h-4" />
                   <span>Markdown</span>
                 </button>
                 <button
                   onClick={exportAsJSON}
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
-                  <span>📄</span>
+                  <FileJson className="w-4 h-4" />
                   <span>JSON</span>
                 </button>
                 <button
                   onClick={exportAsPlainText}
                   className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
                 >
-                  <span>📃</span>
+                  <Type className="w-4 h-4" />
                   <span>Plain Text</span>
                 </button>
               </div>
@@ -877,9 +925,7 @@ export default function ConversationPage() {
           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
           title="Delete Conversation"
         >
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-            <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
-          </svg>
+          <Trash2 className="w-5 h-5" />
         </button>
         </div>
       </div>
@@ -898,7 +944,7 @@ export default function ConversationPage() {
             <div className="space-y-6">
               <div className="flex gap-4 group">
                 <div className="mt-1 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg bg-indigo-50 text-indigo-600">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 "><path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd"></path></svg>
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="font-semibold text-slate-800 text-sm  flex items-center gap-2">
@@ -913,7 +959,7 @@ export default function ConversationPage() {
 
               <div className="flex gap-4 group">
                 <div className="mt-1 w-8 h-8 flex-shrink-0 flex items-center justify-center rounded-lg bg-slate-100 text-slate-500">
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5 "><path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.183a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd"></path></svg>
+                  <Sparkles className="w-5 h-5" />
                 </div>
                 <div>
                   <p className="font-semibold text-slate-700 text-sm ">
@@ -969,14 +1015,10 @@ export default function ConversationPage() {
             {hasNewMessages ? (
               <>
                 <span className="whitespace-nowrap tracking-tight">New Messages</span>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-4 h-4">
-                  <path fillRule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v16.19l6.22-6.22a.75.75 0 1 1 1.06 1.06l-7.5 7.5a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 1 1 1.06-1.06l6.22 6.22V3a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
-                </svg>
+                <ArrowDown className="w-4 h-4" />
               </>
             ) : (
-              <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                <path fillRule="evenodd" d="M12 2.25a.75.75 0 0 1 .75.75v16.19l6.22-6.22a.75.75 0 1 1 1.06 1.06l-7.5 7.5a.75.75 0 0 1-1.06 0l-7.5-7.5a.75.75 0 1 1 1.06-1.06l6.22 6.22V3a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
-              </svg>
+              <ArrowDown className="w-6 h-6" />
             )}
           </button>
         )}
@@ -1029,6 +1071,28 @@ export default function ConversationPage() {
               </div>
             ) : null;
           })()}
+
+          {!hasApiKey && (
+            <div className="absolute bottom-full left-0 right-0 mb-4 animate-in slide-in-from-bottom-2 duration-300">
+              <div className="mx-auto max-w-2xl bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-lg flex items-start gap-4 ring-4 ring-amber-50/50">
+                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
+                  <Key className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-amber-900 text-sm mb-1">OpenAI API Key Required</h4>
+                  <p className="text-amber-800 text-xs leading-relaxed font-medium">
+                    You need to add your own API key to start chatting. Your sessions are private and use your own credits.
+                  </p>
+                </div>
+                <button
+                  onClick={() => router.push("/settings")}
+                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm shrink-0"
+                >
+                  Go to Settings
+                </button>
+              </div>
+            </div>
+          )}
 
           <div className="relative rounded-3xl bg-slate-100 border border-transparent focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent focus-within:bg-white transition-all shadow-sm">
             <textarea
@@ -1158,16 +1222,12 @@ export default function ConversationPage() {
               >
                {isAutoMode ? (
                 <>
-                  <svg className="h-5 w-5 text-white animate-pulse" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor">
-                    <path fillRule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clipRule="evenodd" />
-                  </svg>
+                   <Square className="h-4 w-4 fill-white" />
                   <span className="uppercase tracking-wider text-xs">Stop Auto</span>
                 </>
                ) : (
                 <>
-                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className={`w-5 h-5 transition-transform duration-500`}>
-                   <path fillRule="evenodd" d="M9 4.5a.75.75 0 0 1 .721.544l.813 2.846a3.75 3.75 0 0 0 2.576 2.576l2.846.813a.75.75 0 0 1 0 1.442l-2.846.813a3.75 3.75 0 0 0-2.576 2.576l-.813 2.846a.75.75 0 0 1-1.442 0l-.813-2.846a3.75 3.75 0 0 0-2.576-2.576l-2.846-.813a.75.75 0 0 1 0-1.442l2.846-.813a3.75 3.75 0 0 0 2.576-2.576l.813-2.846A.75.75 0 0 1 9 4.5ZM18 1.5a.75.75 0 0 1 .728.568l.258 1.036c.236.94.97 1.674 1.91 1.91l1.036.258a.75.75 0 0 1 0 1.456l-1.036.258c-.94.236-1.674.97-1.91 1.91l-.258 1.036a.75.75 0 0 1-1.456 0l-.258-1.036a2.625 2.625 0 0 0-1.91-1.91l-1.036-.258a.75.75 0 0 1 0-1.456l1.036-.258a2.625 2.625 0 0 0 1.91-1.91l.258-1.036A.75.75 0 0 1 18 1.5ZM16.5 15a.75.75 0 0 1 .712.513l.394 1.183c.15.447.5.799.948.948l1.183.395a.75.75 0 0 1 0 1.422l-1.183.395c-.447.15-.799.5-.948.948l-.395 1.183a.75.75 0 0 1-1.422 0l-.395-1.036a1.5 1.5 0 0 0-.948-.948l-1.183-.395a.75.75 0 0 1 0-1.422l1.183-.395c.447-.15.799-.5.948-.948l.395-1.183A.75.75 0 0 1 16.5 15Z" clipRule="evenodd" />
-                 </svg>
+                  <Sparkles className="w-5 h-5" />
                  <span className="uppercase tracking-wider text-xs">{isAutoPrimed ? "Discuss" : "Auto"}</span>
                  {isAutoPrimed && (
                    <span className="absolute -top-1 -right-0 bg-amber-400 text-indigo-900 text-[8px] px-1.5 py-0.5 rounded-full uppercase font-black tracking-tighter leading-none shadow-sm">
@@ -1189,9 +1249,7 @@ export default function ConversationPage() {
                 } disabled:opacity-30 disabled:cursor-not-allowed text-white p-2 rounded-full transition-all active:scale-95 flex items-center justify-center shadow-md`}
                title={isAutoPrimed ? "Send and Start Discussion" : "Send Message"}
              >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-5 h-5">
-                 <path fillRule="evenodd" d="M11.47 2.47a.75.75 0 0 1 1.06 0l4.5 4.5a.75.75 0 0 1-1.06 1.06l-3.22-3.22V16.5a.75.75 0 0 1-1.5 0V4.81L8.03 8.03a.75.75 0 0 1-1.06-1.06l4.5-4.5ZM3 15.75a.75.75 0 0 1 .75.75v2.25a1.5 1.5 0 0 0 1.5 1.5h13.5a1.5 1.5 0 0 0 1.5-1.5V16.5a.75.75 0 0 1 1.5 0v2.25a3 3 0 0 1-3 3H5.25a3 3 0 0 1-3-3V16.5a.75.75 0 0 1 .75-.75Z" clipRule="evenodd" />
-               </svg>
+                <Send className="w-5 h-5" />
              </button>
            </div>
           </div>

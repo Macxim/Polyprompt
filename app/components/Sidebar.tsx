@@ -6,6 +6,7 @@ import { useApp } from "../state/AppProvider";
 import { useMemo } from "react";
 import UserMenu from "./UserMenu";
 import { useSession } from "next-auth/react";
+import { Home, Users, Settings, MessageSquare, X } from "lucide-react";
 
 export default function Sidebar() {
   const { state, dispatch } = useApp();
@@ -61,38 +62,32 @@ export default function Sidebar() {
             {/* Close button for mobile */}
             <button
               onClick={closeSidebar}
-              className="md:hidden text-slate-400 hover:text-slate-600 focus:outline-none"
+              className="md:hidden text-slate-400 hover:text-slate-600 transition-colors focus:outline-none"
             >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M6 18L18 6M6 6l12 12"
-                />
-              </svg>
+              <X className="h-6 w-6" />
             </button>
           </div>
 
           <nav className="space-y-1">
             <NavItem
               href="/"
-              icon={<HomeIcon />}
+              icon={<Home className="w-5 h-5" />}
               label="Spaces"
               isActive={pathname === "/"}
               onClick={closeSidebar}
             />
             <NavItem
               href="/agents"
-              icon={<UsersIcon />}
+              icon={<Users className="w-5 h-5" />}
               label="Agents"
               isActive={pathname === "/agents"}
+              onClick={closeSidebar}
+            />
+            <NavItem
+              href="/settings"
+              icon={<Settings className="w-5 h-5" />}
+              label="Settings"
+              isActive={pathname === "/settings"}
               onClick={closeSidebar}
             />
           </nav>
@@ -130,7 +125,9 @@ export default function Sidebar() {
                      }`}
                    >
                      <div className="flex items-center gap-2">
-                       <span className="text-sm">💬</span>
+                       <MessageSquare className={`w-3.5 h-3.5 ${
+                         pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-600" : "text-slate-400"
+                       }`} />
                        <span className={`text-xs font-bold truncate flex-1 ${
                          pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
                        }`}>
@@ -194,50 +191,4 @@ function NavItem({
   );
 }
 
-// Icons
-function HomeIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="w-5 h-5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M9.293 2.293a1 1 0 0 1 1.414 0l7 7A1 1 0 0 1 17 11h-1v6a1 1 0 0 1-1 1h-2a1 1 0 0 1-1-1v-3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v3a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1v-6H3a1 1 0 0 1-.707-1.707l7-7Z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
-
-function UsersIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 20 20"
-      fill="currentColor"
-      className="w-5 h-5"
-    >
-      <path d="M7 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM14.5 9a2.5 2.5 0 1 0 0-5 2.5 2.5 0 0 0 0 5ZM1.615 16.428a1.224 1.224 0 0 1-.569-1.175 6.002 6.002 0 0 1 11.908 0c.058.467-.172.92-.57 1.174A9.953 9.953 0 0 1 7 18a9.953 9.953 0 0 1-5.385-1.572ZM14.5 16h-.106c.07-.297.088-.611.048-.933a7.47 7.47 0 0 0-1.588-3.755 4.502 4.502 0 0 1 5.874 2.636.818.818 0 0 1-.36.98A7.465 7.465 0 0 1 14.5 16Z" />
-    </svg>
-  );
-}
-
-function UserIcon() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      viewBox="0 0 24 24"
-      fill="currentColor"
-      className="w-5 h-5"
-    >
-      <path
-        fillRule="evenodd"
-        d="M7.5 6a4.5 4.5 0 1 1 9 0 4.5 4.5 0 0 1-9 0ZM3.751 20.105a8.25 8.25 0 0 1 16.498 0 .75.75 0 0 1-.437.695A18.683 18.683 0 0 1 12 22.5c-2.786 0-5.433-.608-7.812-1.7a.75.75 0 0 1-.437-.695Z"
-        clipRule="evenodd"
-      />
-    </svg>
-  );
-}
+// NavItem and icons removed in favor of lucide-react

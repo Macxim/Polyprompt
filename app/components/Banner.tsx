@@ -14,25 +14,25 @@ export default function Banner({ maxWidth = "4xl" }: BannerProps) {
   const isError = state.ui.bannerMessage.type === "error";
 
   return (
-    <div className="px-8 max-w-4xl mx-auto">
+    <div className="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 w-full max-w-2xl px-4 animate-in slide-in-from-top-4 fade-in duration-300">
       <div
         role="status"
-        className={`mb-4 border rounded-lg flex justify-between items-start shadow-sm mx-4 mt-4 max-w-${maxWidth} lg:mx-auto px-4 py-3 ${
+        className={`border rounded-2xl flex justify-between items-start shadow-lg backdrop-blur-sm px-5 py-4 ${
           isError
-            ? "border-red-200 bg-red-50 text-red-800"
-            : "border-green-200 bg-green-50 text-green-800"
+            ? "border-red-200 bg-red-50/95 text-red-800"
+            : "border-green-200 bg-green-50/95 text-green-800"
         }`}
       >
-        <span>{state.ui.bannerMessage.message}</span>
+        <span className="font-medium">{state.ui.bannerMessage.message}</span>
         <button
           onClick={() =>
             dispatch({ type: "SET_BANNER", payload: { message: null } })
           }
-          className={`ml-4 font-semibold ${
+          className={`ml-4 font-bold text-sm hover:scale-110 transition-transform ${
             isError ? "text-red-700 hover:text-red-900" : "text-green-700 hover:text-green-900"
           }`}
         >
-          Dismiss
+          ✕
         </button>
       </div>
     </div>

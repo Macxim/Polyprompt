@@ -23,7 +23,7 @@ export default function AutoModeModal({ isOpen, onClose, onStart, initialTopic =
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/20 backdrop-blur-sm animate-in fade-in duration-200">
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200"
+        className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 animate-in zoom-in-95 duration-200"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="p-6">
@@ -68,7 +68,7 @@ export default function AutoModeModal({ isOpen, onClose, onStart, initialTopic =
               <button
                 onClick={() => topic.trim() && onStart(topic, 'quick')}
                 disabled={!topic.trim()}
-                className="group relative flex flex-col items-start p-4 rounded-xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                className="group relative flex flex-col items-start p-4 rounded-2xl border border-indigo-100 bg-gradient-to-br from-indigo-50 to-white hover:border-indigo-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
               >
                 <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-indigo-600">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
@@ -83,7 +83,7 @@ export default function AutoModeModal({ isOpen, onClose, onStart, initialTopic =
               <button
                 onClick={() => topic.trim() && onStart(topic, 'deep')}
                 disabled={!topic.trim()}
-                className="group relative flex flex-col items-start p-4 rounded-xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
+                className="group relative flex flex-col items-start p-4 rounded-2xl border border-purple-100 bg-gradient-to-br from-purple-50 to-white hover:border-purple-300 hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed text-left"
               >
                  <div className="absolute top-3 right-3 opacity-0 group-hover:opacity-100 transition-opacity text-purple-600">
                   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">

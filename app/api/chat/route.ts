@@ -1,15 +1,33 @@
 import { OpenAI } from "openai";
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { getApiKeyForUser } from "@/lib/get-api-key";
 
-// Create OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
-export const runtime = "edge";
+export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   try {
+    const session = await getServerSession(authOptions);
+    if (!session?.user?.id) {
+      return new Response("Unauthorized", { status: 401 });
+    }
+
     const { messages, agent, conversationHistory } = await req.json();
+
+    // Get user-specific or system API key (admin only)
+    const apiKey = await getApiKeyForUser(session.user.id, session.user.email || undefined);
+
+    if (!apiKey) {
+      return new Response(JSON.stringify({
+        error: "API Key Required",
+        message: "Please add your OpenAI API key in Settings to use this feature."
+      }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    const openai = new OpenAI({ apiKey });
 
     // Validate required fields
     if (!messages || !agent) {

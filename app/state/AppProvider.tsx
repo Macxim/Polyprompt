@@ -136,8 +136,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [state, status, session?.user?.id]);
 
+  const contextValue = React.useMemo(() => ({ state, dispatch }), [state]);
+
   return (
-    <AppContext.Provider value={{ state, dispatch }}>
+    <AppContext.Provider value={contextValue}>
       {children}
     </AppContext.Provider>
   );

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Message, Agent } from "../types";
 import AvatarDisplay from "./AvatarDisplay";
@@ -11,7 +11,8 @@ type ChatMessageProps = {
   agents: Agent[];
 };
 
-export default function ChatMessage({ msg, agents }: ChatMessageProps) {
+// Memoize ChatMessage to avoid expensive re-renders on every streaming chunk
+const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
   const { dispatch } = useApp();
   const [copied, setCopied] = useState(false);
 
@@ -113,7 +114,9 @@ export default function ChatMessage({ msg, agents }: ChatMessageProps) {
       </div>
     </div>
   );
-}
+});
+
+export default ChatMessage;
 
 function CodeBlock({ code, language }: { code: string; language: string }) {
   const [copied, setCopied] = useState(false);
