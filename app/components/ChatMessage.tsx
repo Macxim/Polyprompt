@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import ReactMarkdown from "react-markdown";
 import { Message, Agent } from "../types";
 import AvatarDisplay from "./AvatarDisplay";
+import ThinkingIndicator from "./ThinkingIndicator";
 import { useApp } from "../state/AppProvider";
 
 type ChatMessageProps = {
@@ -111,6 +112,11 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
             {msg.content}
           </ReactMarkdown>
         </div>
+
+        {/* Thinking Indicator for streaming empty messages */}
+        {msg.role === "agent" && !msg.content && msg.isStreaming && (
+           <ThinkingIndicator mode="bubble" />
+        )}
       </div>
     </div>
   );

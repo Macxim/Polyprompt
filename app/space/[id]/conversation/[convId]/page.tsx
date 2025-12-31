@@ -1001,11 +1001,7 @@ export default function ConversationPage() {
             />
           ))
         )}
-        {isThinking && (
-          <div className="flex justify-start animate-slide-up">
-            <ThinkingIndicator />
-          </div>
-        )}
+
         <div ref={messagesEndRef} />
 
         {/* Scroll to Bottom Button */}
