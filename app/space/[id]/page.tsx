@@ -8,6 +8,7 @@ import AgentModal from "@/app/components/AgentModal";
 import Banner from "@/app/components/Banner";
 import ConversationModal from "@/app/components/ConversationModal";
 import AvatarDisplay from "@/app/components/AvatarDisplay";
+import { ArrowLeft, Pencil, Users, UserMinus, Plus, MessageSquare, Trash2, ChevronDown } from "lucide-react";
 
 export default function SpacePage() {
   const { state, dispatch } = useApp();
@@ -18,6 +19,8 @@ export default function SpacePage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [newName, setNewName] = useState("");
   const [isSaving, setIsSaving] = useState(false);
+  const [isDangerZoneOpen, setIsDangerZoneOpen] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
 
   const spaces = state.spaces;
 
@@ -161,9 +164,10 @@ export default function SpacePage() {
         <div className="mb-10">
           <button
             onClick={() => router.push("/")}
-            className="text-slate-500 hover:text-blue-600 text-sm font-medium mb-4 flex items-center gap-1 transition-colors"
+            className="text-slate-500 hover:text-indigo-600 text-sm font-medium mb-6 flex items-center gap-2 transition-colors group"
           >
-            ← Back to Spaces
+            <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
+            Back to Spaces
           </button>
 
           <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
@@ -189,12 +193,10 @@ export default function SpacePage() {
                       setNewName(space.name);
                       setIsEditing(true);
                     }}
-                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-blue-500 transition-all"
+                    className="opacity-0 group-hover:opacity-100 text-slate-400 hover:text-indigo-500 transition-all"
                     title="Rename Space"
                   >
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                      <path strokeLinecap="round" strokeLinejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
-                    </svg>
+                    <Pencil className="w-4 h-4" />
                   </button>
                 </div>
               )}
@@ -207,7 +209,7 @@ export default function SpacePage() {
 
           {/* LEFT SIDEBAR: AGENTS */}
           <div className="lg:col-span-1 space-y-6">
-            <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+            <div className="glass-card p-6 rounded-3xl border border-slate-200/60 shadow-sm bg-white/50">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-bold text-xl text-slate-800">Team ({spaceAgents.length})</h2>
               </div>
@@ -225,9 +227,7 @@ export default function SpacePage() {
                         onClick={() => removeAgentFromSpace(agent.id)}
                         title="Remove from space"
                       >
-                       <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z" />
-                      </svg>
+                        <UserMinus className="w-4 h-4" />
                       </button>
                     </div>
                     {!agent.isDefault && (
@@ -260,9 +260,7 @@ export default function SpacePage() {
                       ) : (
                         <span className="text-slate-400">Select an agent...</span>
                       )}
-                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-slate-400">
-                        <path fillRule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clipRule="evenodd" />
-                      </svg>
+                      <ChevronDown className="w-4 h-4 text-slate-400" />
                     </button>
 
                     {isDropdownOpen && (
@@ -321,12 +319,10 @@ export default function SpacePage() {
                 </div>
               ) : (
                  <button
-                  className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-medium hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center gap-2"
+                  className="w-full py-3 border-2 border-dashed border-slate-300 rounded-xl text-slate-500 font-medium hover:border-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 transition-all flex items-center justify-center gap-2"
                   onClick={() => setIsAddingAgent(true)}
                 >
-                  <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                    <path d="M10.75 4.75a.75.75 0 0 0-1.5 0v4.5h-4.5a.75.75 0 0 0 0 1.5h4.5v4.5a.75.75 0 0 0 1.5 0v-4.5h4.5a.75.75 0 0 0 0-1.5h-4.5v-4.5Z" />
-                  </svg>
+                  <Plus className="w-5 h-5" />
                   Add Agent
                 </button>
               )}
@@ -341,16 +337,14 @@ export default function SpacePage() {
                 className="bg-indigo-600 hover:bg-indigo-700 text-white font-medium px-4 py-2 rounded-lg shadow-sm hover:shadow-md transition-all flex items-center gap-2"
                 onClick={addConversation}
               >
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
-                  <path fillRule="evenodd" d="M10 2c-4.418 0-8 3.134-8 7s3.582 7 8 7c.484 0 .956-.038 1.413-.111l2.978 1.654a1 1 0 0 0 1.442-1.085l-.364-2.181C16.892 12.793 18 10.982 18 9c0-3.866-3.582-7-8-7z" clipRule="evenodd" />
-                </svg>
+                <Plus className="w-5 h-5" />
                 New Chat
               </button>
              </div>
 
              <div className="grid gap-4 sm:grid-cols-2">
                {space.conversations.length === 0 ? (
-                 <div className="col-span-full py-12 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-xl">
+                 <div className="col-span-full py-12 text-center bg-slate-50/30 border-2 border-dashed border-slate-200/60 rounded-3xl">
                    <p className="text-slate-400 font-medium">No conversations yet.</p>
                    <p className="text-sm text-slate-400 mt-1">Start a new chat to brainstorm with your agents.</p>
                  </div>
@@ -360,13 +354,11 @@ export default function SpacePage() {
                       <Link
                         href={`/space/${space.id}/conversation/${conv.id}`}
                       >
-                        <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer h-full flex flex-col justify-between group">
+                        <div className="glass-card bg-white/50 p-5 rounded-3xl border border-slate-200/60 shadow-sm hover:shadow-md hover:border-indigo-300 transition-all cursor-pointer h-full flex flex-col justify-between group">
                           <div>
                             <div className="flex items-start justify-between mb-2">
                               <div className="p-2 bg-indigo-50 text-indigo-600 rounded-lg group-hover:bg-indigo-100 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="w-5 h-5">
-                                  <path strokeLinecap="round" strokeLinejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 0 1 .865-.501 48.172 48.172 0 0 0 3.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0 0 12 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018Z" />
-                                </svg>
+                                <MessageSquare className="w-5 h-5" />
                               </div>
                               <span className="text-xs text-slate-400 font-mono">{conv.messages.length} msgs</span>
                             </div>
@@ -398,9 +390,7 @@ export default function SpacePage() {
                         className="absolute top-3 right-3 p-2 bg-white border border-slate-200 rounded-lg text-slate-400 hover:text-red-600 hover:border-red-200 hover:bg-red-50 transition-all opacity-0 group-hover:opacity-100 z-10"
                         title="Delete conversation"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                          <path fillRule="evenodd" d="M8.75 1A2.75 2.75 0 0 0 6 3.75v.443c-.795.077-1.584.176-2.365.298a.75.75 0 1 0 .23 1.482l.149-.022.841 10.518A2.75 2.75 0 0 0 7.596 19h4.807a2.75 2.75 0 0 0 2.742-2.53l.841-10.52.149.023a.75.75 0 0 0 .23-1.482A41.03 41.03 0 0 0 14 4.193V3.75A2.75 2.75 0 0 0 11.25 1h-2.5ZM10 4c.84 0 1.673.025 2.5.075V3.75c0-.69-.56-1.25-1.25-1.25h-2.5c-.69 0-1.25.56-1.25 1.25v.325C8.327 4.025 9.16 4 10 4ZM8.58 7.72a.75.75 0 0 0-1.5.06l.3 7.5a.75.75 0 1 0 1.5-.06l-.3-7.5Zm4.34.06a.75.75 0 1 0-1.5-.06l-.3 7.5a.75.75 0 1 0 1.5.06l.3-7.5Z" clipRule="evenodd" />
-                        </svg>
+                        <Trash2 className="w-4 h-4" />
                       </button>
                     </div>
                   ))
@@ -425,34 +415,103 @@ export default function SpacePage() {
 
         <ConversationModal spaceId={spaceId} />
 
-        {/* Danger Zone */}
+        {/* Danger Zone - Collapsible */}
         <div className="mt-16 pt-8 border-t border-slate-200">
-          <div className="bg-red-50/50 border border-red-100 rounded-2xl p-6 flex flex-col md:flex-row items-center justify-between gap-6 shadow-sm">
-            <div className="flex items-center gap-4 text-center md:text-left">
-              <div className="w-12 h-12 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shadow-sm shrink-0">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" className="w-6 h-6">
-                  <path fillRule="evenodd" d="M16.5 4.478v.227a48.816 48.816 0 013.878.512.75.75 0 11-.256 1.478l-.209-.035-1.005 13.07a3 3 0 01-2.991 2.77H8.084a3 3 0 01-2.991-2.77L4.087 6.66l-.209.035a.75.75 0 01-.256-1.478A48.567 48.567 0 017.5 4.705v-.227c0-1.564 1.213-2.9 2.816-2.951a52.662 52.662 0 013.369 0c1.603.051 2.815 1.387 2.815 2.951zm-6.136-1.452a51.196 51.196 0 013.273 0C14.39 3.05 15 3.684 15 4.478v.113a49.488 49.488 0 00-6 0v-.113c0-.794.609-1.428 1.364-1.452zm-.355 5.945a.75.75 0 10-1.5.058l.347 9a.75.75 0 101.499-.058l-.346-9zm5.48.058a.75.75 0 10-1.498-.058l-.347 9a.75.75 0 001.5.058l.345-9z" clipRule="evenodd" />
-                </svg>
+          <button
+            onClick={() => setIsDangerZoneOpen(!isDangerZoneOpen)}
+            className="w-full flex items-center justify-between p-4 rounded-2xl border border-slate-200 hover:border-slate-300 bg-slate-50/50 hover:bg-slate-50 transition-all group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500 group-hover:text-slate-600 transition-colors">
+                <Trash2 className="w-4 h-4" />
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-bold text-red-700">Danger Zone</h3>
-                <p className="text-red-500/80 text-sm mt-0.5">
-                  Deleting a space is permanent and will remove all conversations and agent associations.
-                </p>
+              <div className="text-left">
+                <h3 className="text-sm font-bold text-slate-700">Advanced Options</h3>
+                <p className="text-xs text-slate-500">Manage space deletion</p>
               </div>
             </div>
-            <button
-              onClick={() => {
-                if (confirm(`Are you absolutely sure you want to delete "${space.name}"? This action cannot be undone.`)) {
-                  deleteSpace();
-                }
-              }}
-              className="px-6 py-2.5 bg-white border border-red-200 text-red-600 font-bold rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all shadow-sm active:scale-95 shrink-0"
-            >
-              Delete this Space
-            </button>
-          </div>
+            <ChevronDown className={`w-5 h-5 text-slate-400 transition-transform ${isDangerZoneOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isDangerZoneOpen && (
+            <div className="mt-4 p-6 rounded-2xl border border-red-200/60 bg-red-50/30 animate-in fade-in slide-in-from-top-2 duration-200">
+              <div className="flex items-start gap-4">
+                <div className="w-10 h-10 rounded-xl bg-red-100 flex items-center justify-center text-red-600 shrink-0">
+                  <Trash2 className="w-5 h-5" />
+                </div>
+                <div className="flex-1">
+                  <h4 className="font-bold text-red-900 mb-1">Delete this space</h4>
+                  <p className="text-sm text-red-700/80 leading-relaxed mb-4">
+                    This will permanently delete <strong>"{space.name}"</strong> and all its conversations. This action cannot be undone.
+                  </p>
+                  <button
+                    onClick={() => setShowDeleteModal(true)}
+                    className="px-4 py-2 bg-white border border-red-300 text-red-700 font-medium rounded-xl hover:bg-red-600 hover:text-white hover:border-red-600 transition-all text-sm active:scale-95"
+                  >
+                    Delete Space
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+
+        {/* Delete Confirmation Modal */}
+        {showDeleteModal && (
+          <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50 p-4 animate-in fade-in duration-200">
+            <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-6">
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-red-100 flex items-center justify-center text-red-600">
+                    <Trash2 className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-800">Delete Space?</h3>
+                    <p className="text-sm text-slate-500">This action cannot be undone</p>
+                  </div>
+                </div>
+
+                <div className="bg-slate-50 rounded-xl p-4 mb-6">
+                  <p className="text-sm text-slate-700 leading-relaxed">
+                    You're about to permanently delete <strong className="text-slate-900">"{space.name}"</strong>.
+                  </p>
+                  <ul className="mt-3 space-y-1.5 text-xs text-slate-600">
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                      <span>{space.conversations.length} conversation{space.conversations.length !== 1 ? 's' : ''} will be deleted</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                      <span>All agent associations will be removed</span>
+                    </li>
+                    <li className="flex items-center gap-2">
+                      <div className="w-1 h-1 rounded-full bg-slate-400"></div>
+                      <span>This cannot be recovered</span>
+                    </li>
+                  </ul>
+                </div>
+
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteModal(false)}
+                    className="flex-1 px-4 py-2.5 border border-slate-300 text-slate-700 font-medium rounded-xl hover:bg-slate-50 transition-all"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowDeleteModal(false);
+                      deleteSpace();
+                    }}
+                    className="flex-1 px-4 py-2.5 bg-red-600 text-white font-bold rounded-xl hover:bg-red-700 transition-all active:scale-95"
+                  >
+                    Delete Space
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </>
   );
