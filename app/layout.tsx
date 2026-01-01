@@ -16,6 +16,7 @@ const outfit = Outfit({
 });
 
 import SidebarLayout from "./components/SidebarLayout";
+import { CSPostHogProvider } from "./providers/PostHogProvider";
 
 export const metadata: Metadata = {
   title: "Polyprompt",
@@ -30,11 +31,13 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${inter.variable} ${outfit.variable} antialiased bg-slate-50 relative flex h-screen overflow-hidden`}>
-        <AuthProvider>
-          <AppProvider>
-            <SidebarLayout>{children}</SidebarLayout>
-          </AppProvider>
-        </AuthProvider>
+        <CSPostHogProvider>
+          <AuthProvider>
+            <AppProvider>
+              <SidebarLayout>{children}</SidebarLayout>
+            </AppProvider>
+          </AuthProvider>
+        </CSPostHogProvider>
       </body>
     </html>
   );

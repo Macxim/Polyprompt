@@ -2,6 +2,7 @@ import { OpenAI } from "openai";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
+import posthog from "@/lib/posthog";
 
 export const runtime = "nodejs";
 
@@ -13,6 +14,18 @@ export async function POST(req: Request) {
     }
 
     const { messages, agent, conversationHistory } = await req.json();
+
+    // Track message sent
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'chat_message_sent',
+      properties: {
+        agent_id: agent.id,
+        agent_name: agent.name,
+        model: agent.model || "gpt-4o-mini",
+        message_length: messages[messages.length - 1].content.length
+      }
+    });
 
     // Get user-specific or system API key (admin only)
     const apiKey = await getApiKeyForUser(session.user.id, session.user.email || undefined);

@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
 import { redis, ensureConnection } from "@/lib/redis"
 import { v4 as uuidv4 } from "uuid"
+import posthog from "@/lib/posthog"
 
 export async function POST(req: Request) {
   try {
@@ -16,7 +17,8 @@ export async function POST(req: Request) {
 
     const normalizedEmail = email.toLowerCase()
 
-    await ensureConnection();
+    await ensureConnection()
+
     // Check if user exists
     const existingUserId = await redis.get(`user:email:${normalizedEmail}`)
     if (existingUserId) {
@@ -44,6 +46,19 @@ export async function POST(req: Request) {
     // Create email mapping
     await redis.set(`user:email:${normalizedEmail}`, userId)
 
+    // Track registration
+    posthog.capture({
+      distinctId: userId,
+      event: 'user_registered',
+      properties: {
+        email: normalizedEmail,
+        name: newUser.name
+      }
+    })
+
+    // In serverless, we flush to ensure capture
+    await posthog.shutdown()
+
     // Return success (excluding password)
     const { password: _, ...userWithoutPassword } = newUser
 
@@ -51,10 +66,10 @@ export async function POST(req: Request) {
       { user: userWithoutPassword, message: "User created successfully" },
       { status: 201 }
     )
-  } catch (error) {
+  } catch (error: any) {
     console.error("Registration error:", error)
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: error?.message || "Internal server error" },
       { status: 500 }
     )
   }
