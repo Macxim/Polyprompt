@@ -90,7 +90,7 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
           </div>
         )}
 
-        <div className={`prose prose-sm ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-relaxed overflow-x-auto`}>
+        <div className={`prose ${msg.role === "user" ? "prose-invert" : "prose-slate"} max-w-none leading-loose overflow-x-auto text-[15px]`}>
           <ReactMarkdown
             components={{
               code({ node, inline, className, children, ...props }: any) {
@@ -106,6 +106,15 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
                     {children}
                   </code>
                 );
+              },
+              p({ children }: any) {
+                return <p className="mb-4 last:mb-0 leading-7">{children}</p>;
+              },
+              ul({ children }: any) {
+                return <ul className="my-4 space-y-2 list-disc pl-5">{children}</ul>;
+              },
+              ol({ children }: any) {
+                return <ol className="my-4 space-y-2 list-decimal pl-5">{children}</ol>;
               }
             }}
           >

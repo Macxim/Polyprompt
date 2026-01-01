@@ -36,9 +36,9 @@ export async function POST(req: Request) {
 
     // Build the verbosity instructions
     const verbosityMap = {
-      concise: "Keep responses brief (1 paragraph max). Be direct and actionable.",
-      balanced: "Provide thoughtful responses (2-3 paragraphs). Balance detail with clarity.",
-      detailed: "Give comprehensive responses (3+ paragraphs). Explore nuances and provide examples."
+      concise: "Keep responses brief and punchy. Use short paragraphs.",
+      balanced: "Provide thoughtful responses but keep them concise. Use short paragraphs (2-3 sentences max) for readability.",
+      detailed: "Give comprehensive responses. IMPORTANT: Break text into many short paragraphs to avoid walls of text."
     };
     const verbosityInstruction = verbosityMap[agent.verbosity as keyof typeof verbosityMap] || verbosityMap.balanced;
 
@@ -46,7 +46,7 @@ export async function POST(req: Request) {
     const openaiMessages = [
       {
         role: "system" as const,
-        content: `${agent.persona || "You are a helpful AI assistant."}\n\nIMPORTANT: ${verbosityInstruction}`,
+        content: `${agent.persona || "You are a helpful AI assistant."}\n\nIMPORTANT: ${verbosityInstruction}\n\nFORMATTING RULES:\n- Use short paragraphs (max 2-3 sentences).\n- Use lists and headers where appropriate to break up text.\n- Avoid huge blocks of text.`,
       },
       // Include previous conversation history
       ...(conversationHistory || []).map((msg: any) => ({
