@@ -1,16 +1,9 @@
-import { createClient } from 'redis';
+import { Redis } from '@upstash/redis';
 
-const globalForRedis = global as unknown as { redis: any };
-
-export const redis = globalForRedis.redis || createClient({
-  url: process.env.polypr0mpt_REDIS_URL,
+export const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL!,
+  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
 });
-
-if (process.env.NODE_ENV !== 'production') globalForRedis.redis = redis;
-
-if (!redis.isOpen) {
-  redis.connect().catch(console.error);
-}
 
 // Key helpers
 export const keys = {
@@ -22,7 +15,8 @@ export const keys = {
 // Data helpers
 export const getUserData = async <T>(key: string): Promise<T[]> => {
   const data = await redis.get(key);
-  return data ? JSON.parse(data) : [];
+  if (!data) return [];
+  return typeof data === 'string' ? JSON.parse(data) : data as T[];
 };
 
 export const setUserData = async <T>(key: string, data: T[]): Promise<void> => {

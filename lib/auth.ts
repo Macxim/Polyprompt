@@ -17,40 +17,60 @@ export const authOptions: NextAuthOptions = {
         password: { label: "Password", type: "password" }
       },
       async authorize(credentials) {
-        if (!credentials?.email || !credentials?.password) {
-          return null
-        }
-
-        const email = credentials.email.toLowerCase()
-        const userId = await redis.get(`user:email:${email}`) as string
-
-        if (!userId) {
-          return null
-        }
-
-        const user = await redis.get(`user:${userId}`) as string
-        if (!user) {
-          return null
-        }
-
-        const validUserData = JSON.parse(user)
-
-        // If user was created via Google, they might not have a password
-        if (!validUserData.password) {
+        try {
+          if (!credentials?.email || !credentials?.password) {
             return null
-        }
+          }
 
-        const isValid = await compare(credentials.password, validUserData.password)
+          const email = credentials.email.toLowerCase()
+          console.log(`[Auth] Attempting login for email: ${email}`);
 
-        if (!isValid) {
-          return null
-        }
+          const userId = await redis.get(`user:email:${email}`) as string
+          console.log(`[Auth] Redis userId lookup result: ${userId ? 'found' : 'not found'}`);
 
-        return {
-          id: validUserData.id,
-          name: validUserData.name,
-          email: validUserData.email,
-          image: validUserData.image,
+          if (!userId) {
+            return null
+          }
+
+          const user = await redis.get(`user:${userId}`) as string
+          if (!user) {
+            console.log(`[Auth] User data not found for userId: ${userId}`);
+            return null
+          }
+
+          // Upstash redis might return an object directly if it was stored as one,
+          // but our code seems to treat it as a string that needs parsing.
+          // Let's handle both.
+          let validUserData;
+          try {
+            validUserData = typeof user === 'string' ? JSON.parse(user) : user;
+          } catch (e) {
+            console.error(`[Auth] Error parsing user data:`, e);
+            return null;
+          }
+
+          // If user was created via Google, they might not have a password
+          if (!validUserData.password) {
+            console.log(`[Auth] User has no password (likely OAuth user)`);
+            return null
+          }
+
+          const isValid = await compare(credentials.password, validUserData.password)
+          console.log(`[Auth] Password validation result: ${isValid}`);
+
+          if (!isValid) {
+            return null
+          }
+
+          return {
+            id: validUserData.id,
+            name: validUserData.name,
+            email: validUserData.email,
+            image: validUserData.image,
+          }
+        } catch (error) {
+          console.error(`[Auth] Authorize error:`, error);
+          throw error;
         }
       }
     }),
