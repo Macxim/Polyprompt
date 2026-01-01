@@ -40,7 +40,7 @@ export async function POST(req: NextRequest) {
     const key = keys.settings(userId)
 
     const currentData = await redis.get(key)
-    const settings = currentData ? JSON.parse(currentData) : {}
+    const settings = (typeof currentData === 'string' ? JSON.parse(currentData) : currentData) || {}
 
     settings.openaiKey = encryptedKey
     settings.updatedAt = Date.now()
@@ -66,7 +66,7 @@ export async function DELETE() {
 
     const currentData = await redis.get(key)
     if (currentData) {
-      const settings = JSON.parse(currentData)
+      const settings = typeof currentData === 'string' ? JSON.parse(currentData) : currentData
       delete settings.openaiKey
       settings.updatedAt = Date.now()
       await redis.set(key, JSON.stringify(settings))

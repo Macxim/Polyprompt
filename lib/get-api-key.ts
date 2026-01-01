@@ -9,7 +9,7 @@ export async function getApiKeyForUser(userId: string, email?: string): Promise<
 
   if (data) {
     try {
-      const settings = JSON.parse(data)
+      const settings = typeof data === 'string' ? JSON.parse(data) : (data as any)
       if (settings.openaiKey && ENCRYPTION_SECRET) {
         userKey = decrypt(settings.openaiKey, ENCRYPTION_SECRET)
       }
@@ -46,7 +46,7 @@ export async function hasUserApiKey(userId: string, email?: string): Promise<boo
   if (!data) return false
 
   try {
-    const settings = JSON.parse(data)
+    const settings = typeof data === 'string' ? JSON.parse(data) : (data as any)
     return !!settings.openaiKey
   } catch {
     return false
