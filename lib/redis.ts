@@ -1,9 +1,36 @@
-import { Redis } from '@upstash/redis';
+import { createClient } from 'redis';
 
-export const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL!,
-  token: process.env.UPSTASH_REDIS_REST_TOKEN!,
+const redisUrl = process.env.polypr0mpt_REDIS_URL;
+
+if (!redisUrl && process.env.NODE_ENV === 'production') {
+  console.error("CRITICAL: polypr0mpt_REDIS_URL is missing!");
+}
+
+// Create singleton client
+const globalForRedis = global as unknown as { redisClient: ReturnType<typeof createClient> | undefined };
+
+export const redis = globalForRedis.redisClient ?? createClient({
+  url: redisUrl
 });
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForRedis.redisClient = redis;
+}
+
+// Ensure connection
+if (!redis.isOpen) {
+  redis.connect().catch(err => {
+    console.error('Redis Connection Error:', err);
+  });
+}
+
+redis.on('error', (err) => console.error('Redis Client Error:', err));
+
+export const ensureConnection = async () => {
+  if (!redis.isOpen) {
+    await redis.connect();
+  }
+};
 
 // Key helpers
 export const keys = {
@@ -14,13 +41,25 @@ export const keys = {
 
 // Data helpers
 export const getUserData = async <T>(key: string): Promise<T[]> => {
-  const data = await redis.get(key);
-  if (!data) return [];
-  return typeof data === 'string' ? JSON.parse(data) : data as T[];
+  try {
+    await ensureConnection();
+    const data = await redis.get(key);
+    if (!data) return [];
+    return JSON.parse(data) as T[];
+  } catch (error) {
+    console.error(`Error getting user data for key ${key}:`, error);
+    return [];
+  }
 };
 
 export const setUserData = async <T>(key: string, data: T[]): Promise<void> => {
-  await redis.set(key, JSON.stringify(data));
+  try {
+    await ensureConnection();
+    await redis.set(key, JSON.stringify(data));
+  } catch (error) {
+    console.error(`Error setting user data for key ${key}:`, error);
+    throw error;
+  }
 };
 
 export default redis;

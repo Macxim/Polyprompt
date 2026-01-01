@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
+import { redis, ensureConnection } from '@/lib/redis';
 
 /**
  * Example Route Handler for Redis (Vercel KV)
@@ -7,6 +7,7 @@ import { redis } from '@/lib/redis';
  */
 export async function GET() {
   try {
+    await ensureConnection();
     // 1. Sanity check: Ping
     const pong = await redis.ping();
 

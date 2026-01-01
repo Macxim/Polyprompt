@@ -1,4 +1,4 @@
-import { redis } from "@/lib/redis";
+import { redis, ensureConnection } from "@/lib/redis";
 import { notFound } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import AvatarDisplay from "@/app/components/AvatarDisplay";
@@ -9,6 +9,7 @@ export const dynamic = 'force-dynamic';
 
 async function getSharedConversation(id: string) {
   try {
+    await ensureConnection();
     const data = await redis.get(`share:${id}`);
     if (!data) return null;
     return typeof data === 'string' ? JSON.parse(data) : data;

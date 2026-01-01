@@ -2,7 +2,7 @@ import { NextAuthOptions } from "next-auth"
 import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
-import { redis } from "@/lib/redis"
+import { redis, ensureConnection } from "@/lib/redis"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -25,6 +25,7 @@ export const authOptions: NextAuthOptions = {
           const email = credentials.email.toLowerCase()
           console.log(`[Auth] Attempting login for email: ${email}`);
 
+          await ensureConnection();
           const userId = await redis.get(`user:email:${email}`) as string
           console.log(`[Auth] Redis userId lookup result: ${userId ? 'found' : 'not found'}`);
 

@@ -1,9 +1,10 @@
-import { redis, keys } from "./redis"
+import { redis, keys, ensureConnection } from "@/lib/redis";
 import { decrypt } from "./crypto"
 
 const ENCRYPTION_SECRET = process.env.API_KEY_ENCRYPTION_SECRET
 
 export async function getApiKeyForUser(userId: string, email?: string): Promise<string | null> {
+  await ensureConnection();
   const data = await redis.get(keys.settings(userId))
   let userKey: string | null = null
 
@@ -34,6 +35,7 @@ export async function getApiKeyForUser(userId: string, email?: string): Promise<
 }
 
 export async function hasUserApiKey(userId: string, email?: string): Promise<boolean> {
+  await ensureConnection();
   // Check if user is an admin
   if (email && process.env.OPENAI_API_KEY) {
     const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase())

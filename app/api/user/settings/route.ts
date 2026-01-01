@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server"
 import { getServerSession } from "next-auth"
 import { authOptions } from "@/lib/auth"
-import { redis, keys } from "@/lib/redis"
+import { redis, keys, ensureConnection } from "@/lib/redis"
 import { encrypt } from "@/lib/crypto"
 import { hasUserApiKey } from "@/lib/get-api-key"
 
 const ENCRYPTION_SECRET = process.env.API_KEY_ENCRYPTION_SECRET
 
 export async function GET() {
+  await ensureConnection();
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -18,6 +19,7 @@ export async function GET() {
 }
 
 export async function POST(req: NextRequest) {
+  await ensureConnection();
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
@@ -55,6 +57,7 @@ export async function POST(req: NextRequest) {
 }
 
 export async function DELETE() {
+  await ensureConnection();
   const session = await getServerSession(authOptions)
   if (!session?.user?.id) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })

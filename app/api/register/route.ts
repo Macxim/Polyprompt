@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { hash } from "bcryptjs"
-import { redis } from "@/lib/redis"
+import { redis, ensureConnection } from "@/lib/redis"
 import { v4 as uuidv4 } from "uuid"
 
 export async function POST(req: Request) {
@@ -16,6 +16,7 @@ export async function POST(req: Request) {
 
     const normalizedEmail = email.toLowerCase()
 
+    await ensureConnection();
     // Check if user exists
     const existingUserId = await redis.get(`user:email:${normalizedEmail}`)
     if (existingUserId) {
