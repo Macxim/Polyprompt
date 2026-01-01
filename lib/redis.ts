@@ -37,6 +37,7 @@ export const keys = {
   agents: (userId: string) => `user:${userId}:agents`,
   spaces: (userId: string) => `user:${userId}:spaces`,
   settings: (userId: string) => `user:${userId}:settings`,
+  systemSpend: 'system:openai:spend',
 };
 
 // Data helpers

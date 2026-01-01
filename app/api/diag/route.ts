@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { redis } from '@/lib/redis';
+import { keys, redis } from '@/lib/redis';
 
 export async function GET() {
   const diagnostics: any = {
@@ -27,6 +27,14 @@ export async function GET() {
     const result = await redis.get(testKey);
     diagnostics.redisTest.read = 'SUCCESS';
     diagnostics.redisTest.result = result ? JSON.parse(result) : null;
+
+    // Check budget spend
+    const spend = await redis.get(keys.systemSpend);
+    diagnostics.openaiBudget = {
+      limit: 30.0,
+      current: parseFloat(spend || "0"),
+      status: parseFloat(spend || "0") >= 30.0 ? "EXCEEDED" : "OK"
+    };
 
   } catch (error: any) {
     diagnostics.redisTest.status = 'FAILED';

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
 import posthog from "@/lib/posthog";
+import { keys, redis } from "@/lib/redis";
 
 export const runtime = "nodejs";
 
@@ -14,6 +15,22 @@ export async function POST(req: Request) {
     }
 
     const { messages, agent, conversationHistory } = await req.json();
+
+    // --- PHASE 2: BUDGET CHECK ---
+    const BUDGET_LIMIT = 30.0;
+    const currentSpendStr = await redis.get(keys.systemSpend);
+    const currentSpend = parseFloat(currentSpendStr || "0");
+
+    if (currentSpend >= BUDGET_LIMIT) {
+      return new Response(JSON.stringify({
+        error: "Monthly Budget Reached",
+        message: "The system's OpenAI budget has been reached for this month. Please contact the administrator."
+      }), {
+        status: 403,
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+    // ----------------------------
 
     // Track message sent
     posthog.capture({
@@ -74,8 +91,9 @@ export async function POST(req: Request) {
     ];
 
     // Call OpenAI API with streaming and usage tracking
+    const selectedModel = agent.model || "gpt-4o-mini";
     const response = await openai.chat.completions.create({
-      model: agent.model || "gpt-4o-mini",
+      model: selectedModel,
       messages: openaiMessages,
       temperature: agent.temperature ?? 0.7,
       stream: true,
@@ -87,7 +105,7 @@ export async function POST(req: Request) {
     const stream = new ReadableStream({
       async start(controller) {
         try {
-          let tokenUsage = null;
+          let tokenUsage: any = null;
 
           for await (const chunk of response) {
             const content = chunk.choices[0]?.delta?.content || "";
@@ -105,10 +123,29 @@ export async function POST(req: Request) {
             }
           }
 
-          // Send token usage as a special marker at the end
+          // --- PHASE 2: CALCULATE AND UPDATE SPEND ---
           if (tokenUsage) {
+            // Pricing per 1M tokens (Nov 2024 ballpark)
+            // gpt-4o-mini: $0.150 / 1M input, $0.600 / 1M output
+            // gpt-4o: $2.50 / 1M input, $10.00 / 1M output
+            let cost = 0;
+            if (selectedModel.includes("gpt-4o-mini")) {
+              cost = (tokenUsage.prompt * 0.15 / 1000000) + (tokenUsage.completion * 0.60 / 1000000);
+            } else if (selectedModel.includes("gpt-4o")) {
+              cost = (tokenUsage.prompt * 2.50 / 1000000) + (tokenUsage.completion * 10.00 / 1000000);
+            } else {
+              // Default to mini pricing if unknown
+              cost = (tokenUsage.prompt * 0.15 / 1000000) + (tokenUsage.completion * 0.60 / 1000000);
+            }
+
+            if (cost > 0) {
+              await redis.incrByFloat(keys.systemSpend, cost);
+            }
+
+            // Send token usage as a special marker at the end
             controller.enqueue(encoder.encode(`\n__TOKENS__${JSON.stringify(tokenUsage)}`));
           }
+          // -------------------------------------------
 
           controller.close();
         } catch (error) {
