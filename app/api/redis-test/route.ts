@@ -20,14 +20,13 @@ export async function GET() {
       success: true,
       ping: pong,
       result,
-      message: "Redis is fully wired with polypr0mpt_REDIS_URL using the standard 'redis' package!"
+      status: 'Upstash Redis is responding'
     });
-  } catch (error) {
-    console.error('Redis Error:', error);
+  } catch (error: any) {
+    console.error('Redis Test Error:', error);
     return NextResponse.json({
       success: false,
-      error: 'Failed to connect to Redis',
-      details: error instanceof Error ? error.message : 'Unknown error'
+      error: error.message
     }, { status: 500 });
   }
 }
