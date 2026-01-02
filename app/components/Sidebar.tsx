@@ -51,14 +51,14 @@ export default function Sidebar() {
         <div className="flex-1 flex flex-col min-h-0">
           <div className="p-6">
           <div className="flex items-center justify-between mb-8">
-            <div className="flex items-center gap-2">
+            <Link href="/" onClick={closeSidebar} className="flex items-center gap-2 hover:opacity-80 transition-opacity">
               <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
                 P
               </div>
               <span className="font-outfit font-bold text-xl text-slate-800 tracking-tight">
                 Polyprompt
               </span>
-            </div>
+            </Link>
             {/* Close button for mobile */}
             <button
               onClick={closeSidebar}

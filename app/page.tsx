@@ -157,7 +157,7 @@ export default function Home() {
         ) : (
           // Full Hero Section for New Users
           <>
-            <section className="relative pt-20 overflow-hidden">
+            <section className="relative pt-12 sm:pt-20 overflow-hidden" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
               <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-6xl h-full -z-10">
                 <div className="absolute top-0 left-1/4 w-64 h-64 bg-indigo-400/20 rounded-full blur-3xl animate-pulse"></div>
                 <div className="absolute bottom-0 right-1/4 w-96 h-96 bg-blue-400/10 rounded-full blur-3xl animate-pulse-gentle"></div>
@@ -169,29 +169,29 @@ export default function Home() {
                   Agentic Intelligence Platform
                 </div>
 
-                <h1 className="text-6xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700">
+                <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 leading-[1.1]">
                   Your AI Workforce, <br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500">
                     Orchestrated.
                   </span>
                 </h1>
 
-                <p className="text-slate-500 text-xl max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 leading-relaxed font-medium">
+                <p className="text-slate-500 text-lg md:text-xl max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 leading-relaxed font-medium px-4 sm:px-0">
                   Polyprompt provides specialized spaces to organize AI agents, projects, and multi-agent discussions in one seamless environment.
                 </p>
 
                 {/* Premium Create Space Area */}
-                <div className="max-w-xl mx-auto mb-16 animate-in fade-in slide-in-from-bottom-8 duration-1000">
+                <div className="max-w-xl mx-auto mb-16 px-4 sm:px-0 animate-in fade-in slide-in-from-bottom-8 duration-1000">
                   <div className="relative group">
                     <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-blue-600 rounded-3xl blur opacity-25 group-hover:opacity-40 transition duration-1000 group-hover:duration-200"></div>
-                    <div className="relative flex gap-2 p-2 bg-white rounded-[24px] border border-slate-200/60 shadow-xl shadow-indigo-100/20 ring-1 ring-slate-100/50">
+                    <div className="relative flex flex-col sm:flex-row gap-2 p-2 bg-white rounded-[24px] sm:rounded-[24px] border border-slate-200/60 shadow-xl shadow-indigo-100/20 ring-1 ring-slate-100/50">
                       <div className="flex-1 relative">
                         <div className="absolute inset-y-0 left-4 flex items-center pointer-events-none text-slate-400">
                           <Plus className="w-5 h-5" />
                         </div>
                         <input
                           ref={nameInputRef}
-                          className="w-full pl-12 pr-4 py-4 bg-transparent text-slate-800 font-medium placeholder:text-slate-400 focus:outline-none text-lg"
+                          className="w-full pl-12 pr-4 py-4 bg-transparent text-slate-800 font-medium placeholder:text-slate-400 focus:outline-none text-base sm:text-lg"
                           value={name}
                           onChange={(e) => {
                             const value = e.target.value;
@@ -210,10 +210,11 @@ export default function Home() {
                         />
                       </div>
                       <button
-                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+                        className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 sm:px-8 py-4 rounded-2xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center justify-center gap-2 whitespace-nowrap"
                         onClick={handleAddSpace}
                       >
-                        Launch Space
+                        <span className="inline sm:hidden">Launch</span>
+                        <span className="hidden sm:inline">Launch Space</span>
                         <ArrowRight className="w-4 h-4" />
                       </button>
                     </div>
