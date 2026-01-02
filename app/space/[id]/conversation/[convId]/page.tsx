@@ -835,7 +835,7 @@ export default function ConversationPage() {
   return (
     <div className="flex flex-col h-screen overflow-hidden bg-slate-50/50">
       {/* Header */}
-      <div className="glass-panel sticky top-0 z-10 px-6 py-4 flex items-center justify-between border-b border-slate-200/50 shadow-sm">
+      <div className="glass-panel sticky top-0 z-10 px-6 py-4 flex items-center justify-between border-b border-slate-200/50 shadow-sm" style={{ paddingTop: 'calc(1rem + env(safe-area-inset-top, 0px))' }}>
         <div className="flex items-center gap-4 flex-1 min-w-0">
           <button
             onClick={() => router.push(`/space/${spaceId}`)}
