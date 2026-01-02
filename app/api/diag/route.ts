@@ -1,9 +1,18 @@
 import { NextResponse } from 'next/server';
-import { keys, redis } from '@/lib/redis';
+import { getServerSession } from "next-auth";
+import { authOptions } from "@/lib/auth";
+import { keys, redis, ensureConnection } from "@/lib/redis";
 
 export async function GET() {
+  const session = await getServerSession(authOptions);
+
   const diagnostics: any = {
     timestamp: new Date().toISOString(),
+    user: session?.user ? {
+      id: session.user.id,
+      email: session.user.email,
+      name: session.user.name
+    } : null,
     env: {
       polypr0mpt_REDIS_URL: process.env.polypr0mpt_REDIS_URL ? 'PRESENT' : 'MISSING',
       NEXTAUTH_URL: process.env.NEXTAUTH_URL || 'NOT SET',
