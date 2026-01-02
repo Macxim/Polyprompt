@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { CONVERSATION_TEMPLATES } from "../data/templates";
 import { ConversationTemplate } from "../types";
 import { DEFAULT_AGENTS } from "../data/defaultAgents";
+import posthog from 'posthog-js';
 
 type Props = {
   spaceId: string;
@@ -47,6 +48,14 @@ export default function ConversationModal({ spaceId }: Props) {
   const handleStartTemplate = (template: ConversationTemplate) => {
     if (!space) return;
 
+    // Track template selected
+    posthog.capture('template_selected', {
+      template_id: template.id,
+      template_name: template.name,
+      space_id: spaceId,
+      auto_mode_enabled: template.autoModeEnabled
+    });
+
     // 1. Determine agents to include
     // Template specifies selectedAgents (IDs).
     // We need to ensure these agents are in the space.
@@ -83,7 +92,22 @@ export default function ConversationModal({ spaceId }: Props) {
       },
     });
 
+    // Track conversation started
+    posthog.capture('conversation_started', {
+      space_id: spaceId,
+      conversation_id: newConversationId,
+      agent_count: template.selectedAgents.length,
+      from_template: true,
+      template_name: template.name
+    });
+
+    // Track auto mode if enabled
     if (template.autoModeEnabled) {
+      posthog.capture('auto_mode_used', {
+        space_id: spaceId,
+        conversation_id: newConversationId,
+        template_name: template.name
+      });
       dispatch({ type: "SET_BANNER", payload: { message: `Started "${template.name}" template.`, type: "success" } });
     } else {
       dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
@@ -147,6 +171,22 @@ export default function ConversationModal({ spaceId }: Props) {
         ],
       },
     });
+
+    // Track conversation started (custom)
+    posthog.capture('conversation_started', {
+      space_id: spaceId,
+      conversation_id: newConversationId,
+      agent_count: selectedAgentIds.length,
+      from_template: false
+    });
+
+    // Track auto mode if enabled
+    if (autoMode) {
+      posthog.capture('auto_mode_used', {
+        space_id: spaceId,
+        conversation_id: newConversationId
+      });
+    }
 
     dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });

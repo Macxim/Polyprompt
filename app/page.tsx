@@ -3,6 +3,7 @@ import { useState, useRef } from "react";
 import Link from "next/link";
 import { useApp } from "./state/AppProvider";
 import Banner from "./components/Banner";
+import posthog from 'posthog-js';
 import {
   Plus,
   Layers,
@@ -41,14 +42,22 @@ export default function Home() {
       return;
     }
 
+    const spaceId = generateId();
+
     dispatch({
       type: "ADD_SPACE",
       payload: {
-        id: generateId(),
+        id: spaceId,
         name,
         agentIds: [],
         conversations: [],
       },
+    });
+
+    // Track space creation
+    posthog.capture('space_created', {
+      space_id: spaceId,
+      space_name: name
     });
 
     dispatch({

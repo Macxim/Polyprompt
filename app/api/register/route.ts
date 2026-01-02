@@ -46,10 +46,10 @@ export async function POST(req: Request) {
     // Create email mapping
     await redis.set(`user:email:${normalizedEmail}`, userId)
 
-    // Track registration
+    // Track sign up
     posthog.capture({
       distinctId: userId,
-      event: 'user_registered',
+      event: 'user_signed_up',
       properties: {
         email: normalizedEmail,
         name: newUser.name

@@ -3,6 +3,7 @@ import GoogleProvider from "next-auth/providers/google"
 import CredentialsProvider from "next-auth/providers/credentials"
 import { compare } from "bcryptjs"
 import { redis, ensureConnection } from "@/lib/redis"
+import posthog from "@/lib/posthog"
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -91,6 +92,29 @@ export const authOptions: NextAuthOptions = {
     async session({ session, token }) {
       if (session?.user) {
         session.user.id = token.id as string
+
+        // Track returning user (day 2+)
+        try {
+          await ensureConnection();
+          const userData = await redis.get(`user:${token.id}`) as string;
+          if (userData) {
+            const parsed = typeof userData === 'string' ? JSON.parse(userData) : userData;
+            if (parsed.createdAt) {
+              const createdDate = new Date(parsed.createdAt);
+              const now = new Date();
+              const daysSinceCreation = (now.getTime() - createdDate.getTime()) / (1000 * 60 * 60 * 24);
+
+              if (daysSinceCreation >= 1) {
+                posthog.capture({
+                  distinctId: token.id as string,
+                  event: 'user_returned_day_2'
+                });
+              }
+            }
+          }
+        } catch (e) {
+          console.error('[Auth] Error tracking returning user:', e);
+        }
       }
       return session
     },

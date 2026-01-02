@@ -35,7 +35,7 @@ export async function POST(req: Request) {
     // Track message sent
     posthog.capture({
       distinctId: session.user.id,
-      event: 'chat_message_sent',
+      event: 'message_sent',
       properties: {
         agent_id: agent.id,
         agent_name: agent.name,
