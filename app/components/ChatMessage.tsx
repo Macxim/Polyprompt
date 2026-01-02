@@ -68,21 +68,22 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
         )}
 
         {msg.role === "agent" && (
-          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-slate-100/50">
+          <div className="flex items-start gap-3 mb-2 pb-2 border-b border-slate-100/50">
             <AvatarDisplay
               agent={{
                 id: msg.agentId || "",
                 name: msg.agentName || "Agent",
                 avatar: agentInfo?.avatar
               }}
-              size="sm"
+              size="md"
+              className="mt-0.5"
             />
-            <div className="flex items-baseline gap-2">
-               <span className="text-xs font-bold text-slate-500 uppercase tracking-wider">
+            <div className="flex flex-col min-w-0">
+               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none mb-1">
                  {msg.agentName}
                </span>
                {agentInfo?.persona && (
-                  <span className="text-[12px] text-slate-400 font-medium">
+                  <span className="text-[12px] text-slate-400 font-medium leading-tight">
                     {agentInfo.persona}
                   </span>
                )}

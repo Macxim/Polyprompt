@@ -867,13 +867,15 @@ export default function ConversationPage() {
                }}
                className="text-lg font-bold text-slate-800 leading-tight bg-transparent border-b border-transparent hover:border-slate-300 focus:border-indigo-500 focus:outline-none transition-colors w-full sm:w-auto"
              />
-              <div className="flex items-center gap-3 text-xs">
-                <p className="text-slate-500 font-medium">{spaceAgentsCount(state, space, conversation)} Agents active</p>
+              <div className="flex items-center gap-2 text-[10px] sm:text-xs">
+                <p className="text-slate-500 font-medium truncate">
+                  {spaceAgentsCount(state, space, conversation)} Agents
+                </p>
                 {totalTokens > 0 && (
                   <>
                     <span className="text-slate-300">•</span>
-                    <p className="text-slate-500 font-medium">
-                      {formatTokens(totalTokens)} tokens • ${totalCost.toFixed(4)}
+                    <p className="text-slate-500 font-medium whitespace-nowrap">
+                      {formatTokens(totalTokens)} tokens
                     </p>
                   </>
                 )}
@@ -882,77 +884,88 @@ export default function ConversationPage() {
         </div>
 
         <div className="flex items-center gap-1.5">
-          {/* Share Button */}
-          <button
-            onClick={handleShare}
-            disabled={isSharing}
-            className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 font-medium text-sm ${
-              shareCopied
-                ? "text-emerald-600 bg-emerald-50 border border-emerald-200"
-                : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
-            }`}
-          >
-            {isSharing ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : shareCopied ? (
-              <Check className="w-4 h-4 animate-in zoom-in duration-200" />
-            ) : (
-              <Share2 className="w-4 h-4" />
-            )}
-            <span>{shareCopied ? "Copied" : "Share"}</span>
-          </button>
-          {/* Export Dropdown */}
-          <div className="relative">
+          {/* Desktop Actions */}
+          <div className="hidden sm:flex items-center gap-1.5">
             <button
-              onClick={() => setShowExportMenu(!showExportMenu)}
-              className={`px-3 py-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-2 font-medium text-sm ${showExportMenu ? 'bg-indigo-50 text-indigo-600' : ''}`}
+              onClick={handleShare}
+              disabled={isSharing}
+              className={`px-3 py-1.5 rounded-lg transition-all flex items-center gap-2 font-medium text-sm ${
+                shareCopied
+                  ? "text-emerald-600 bg-emerald-50 border border-emerald-200"
+                  : "text-slate-600 hover:text-indigo-600 hover:bg-indigo-50"
+              }`}
             >
-               <Download className="w-4 h-4" />
-              <span>Export</span>
+              {isSharing ? <Loader2 className="h-4 w-4 animate-spin" /> : shareCopied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
+              <span>{shareCopied ? "Copied" : "Share"}</span>
             </button>
 
+            <div className="relative">
+              <button
+                onClick={() => setShowExportMenu(!showExportMenu)}
+                className={`px-3 py-1.5 text-slate-600 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-all flex items-center gap-2 font-medium text-sm ${showExportMenu ? 'bg-indigo-50 text-indigo-600' : ''}`}
+              >
+                <Download className="w-4 h-4" />
+                <span>Export</span>
+              </button>
+              {showExportMenu && (
+                <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20">
+                  <button onClick={exportAsMarkdown} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"><FileText className="w-4 h-4" /> Markdown</button>
+                  <button onClick={exportAsJSON} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"><FileJson className="w-4 h-4" /> JSON</button>
+                  <button onClick={exportAsPlainText} className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"><Type className="w-4 h-4" /> Plain Text</button>
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={() => {
+                if (confirm(`Delete conversation "${conversation.title}"?`)) {
+                  dispatch({ type: "DELETE_CONVERSATION", payload: { spaceId, conversationId: convId } });
+                  router.push(`/space/${spaceId}`);
+                }
+              }}
+              className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+              title="Delete Conversation"
+            >
+              <Trash2 className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Mobile Actions Dropdown */}
+          <div className="sm:hidden relative">
+            <button
+               onClick={() => setShowExportMenu(!showExportMenu)}
+               className="p-2 text-slate-500 hover:bg-slate-100 rounded-full"
+            >
+               <ChevronDown className={`w-6 h-6 transition-transform ${showExportMenu ? 'rotate-180' : ''}`} />
+            </button>
             {showExportMenu && (
-              <div className="absolute right-0 mt-2 w-48 bg-white border border-slate-200 rounded-lg shadow-lg py-1 z-20">
+              <div className="absolute right-0 mt-2 w-56 bg-white border border-slate-200 rounded-xl shadow-xl py-2 z-20 overflow-hidden animate-in fade-in slide-in-from-top-2 duration-200">
                 <button
-                  onClick={exportAsMarkdown}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                  onClick={handleShare}
+                  className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 flex items-center gap-3"
                 >
-                  <FileText className="w-4 h-4" />
-                  <span>Markdown</span>
+                  <Share2 className="w-4 h-4" />
+                  <span>{shareCopied ? "Link Copied" : "Share Link"}</span>
                 </button>
+                <div className="h-px bg-slate-100 mx-2 my-1" />
+                <button onClick={exportAsMarkdown} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 flex items-center gap-3"><FileText className="w-4 h-4" /> Export Markdown</button>
+                <button onClick={exportAsJSON} className="w-full text-left px-4 py-3 text-sm text-slate-700 hover:bg-indigo-50 flex items-center gap-3"><FileJson className="w-4 h-4" /> Export JSON</button>
+                <div className="h-px bg-slate-100 mx-2 my-1" />
                 <button
-                  onClick={exportAsJSON}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
+                  onClick={() => {
+                    if (confirm(`Delete conversation?`)) {
+                      dispatch({ type: "DELETE_CONVERSATION", payload: { spaceId, conversationId: convId } });
+                      router.push(`/space/${spaceId}`);
+                    }
+                  }}
+                  className="w-full text-left px-4 py-3 text-sm text-red-600 hover:bg-red-50 flex items-center gap-3"
                 >
-                  <FileJson className="w-4 h-4" />
-                  <span>JSON</span>
-                </button>
-                <button
-                  onClick={exportAsPlainText}
-                  className="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-indigo-50 hover:text-indigo-600 transition-colors flex items-center gap-2"
-                >
-                  <Type className="w-4 h-4" />
-                  <span>Plain Text</span>
+                  <Trash2 className="w-4 h-4" />
+                  <span>Delete Conversation</span>
                 </button>
               </div>
             )}
           </div>
-
-          <button
-          onClick={() => {
-            if (confirm(`Delete conversation "${conversation.title}"?`)) {
-              dispatch({
-                type: "DELETE_CONVERSATION",
-                payload: { spaceId, conversationId: convId },
-              });
-              router.push(`/space/${spaceId}`);
-            }
-          }}
-          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors"
-          title="Delete Conversation"
-        >
-          <Trash2 className="w-5 h-5" />
-        </button>
         </div>
       </div>
 
@@ -1149,8 +1162,8 @@ export default function ConversationPage() {
                 setShowMentionDropdown(false);
               }
             }}
-            placeholder="Type your message... (use @ to mention agents)"
-            className="w-full bg-transparent border-none rounded-3xl px-4 py-3.5 pr-32 focus:ring-0 text-slate-800 placeholder:text-slate-400 font-medium outline-none resize-none min-h-[52px]"
+            placeholder="Type your message..."
+            className="w-full bg-transparent border-none rounded-3xl px-4 py-3.5 pr-[170px] focus:ring-0 text-slate-800 placeholder:text-slate-400 font-medium outline-none resize-none min-h-[52px]"
             rows={1}
             onKeyDown={(e) => {
               if (showMentionDropdown) {
