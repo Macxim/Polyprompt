@@ -129,8 +129,10 @@ export default function AgentsPage() {
                 <span className="bg-indigo-100 text-indigo-600 p-1.5 rounded-lg">
                   <Users className="w-5 h-5" />
                 </span>
-                Custom Agents
-                <span className="text-sm font-normal text-slate-400 ml-2">({customAgents.length})</span>
+                <span className="flex items-baseline">
+                  Custom Agents
+                  <span className="text-sm font-normal text-slate-400 ml-2">({customAgents.length})</span>
+                </span>
               </h2>
 
               {customAgents.length === 0 ? (
@@ -158,8 +160,10 @@ export default function AgentsPage() {
                 <span className="bg-amber-100 text-amber-600 p-1.5 rounded-lg">
                   <Sparkles className="w-5 h-5" />
                 </span>
-                Default Agents
-                <span className="text-sm font-normal text-slate-400 ml-2">({defaultAgents.length})</span>
+                <span className="flex items-baseline">
+                  Default Agents
+                  <span className="text-sm font-normal text-slate-400 ml-2">({defaultAgents.length})</span>
+                </span>
               </h2>
 
                <div className="grid gap-6 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
