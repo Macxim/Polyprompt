@@ -221,7 +221,7 @@ export default function Home() {
                   </div>
 
                   {/* Counter/Error */}
-                  <div className="flex justify-between items-center mt-3 px-4">
+                  <div className="sm:flex justify-between items-center mt-3 px-4 hidden">
                     {nameError ? (
                       <p className="text-red-500 text-xs font-bold flex items-center gap-1">
                         <span className="text-sm">⚠️</span> {nameError}
