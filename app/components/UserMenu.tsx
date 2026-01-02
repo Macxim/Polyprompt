@@ -24,12 +24,12 @@ export default function UserMenu() {
         )}
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-sm font-bold text-slate-800 truncate leading-tight">
+        <p className="text-sm font-bold text-slate-800 truncate">
           {session.user.name}
         </p>
         <button
           onClick={() => signOut({ callbackUrl: "/auth/signin" })}
-          className="text-[11px] font-bold text-slate-400 hover:text-indigo-600 transition-colors uppercase tracking-wider"
+          className="text-xs font-bold text-slate-400 hover:text-indigo-600 transition-colors cursor-pointer"
         >
           Sign Out
         </button>
