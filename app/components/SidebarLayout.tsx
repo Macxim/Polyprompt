@@ -16,7 +16,7 @@ export default function SidebarLayout({
       <Sidebar />
       <main className="flex-1 overflow-y-auto relative bg-slate-50/50 flex flex-col h-full">
         {/* Mobile Header */}
-        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 pb-3 flex items-center justify-between sticky top-0 z-10 shadow-sm" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
+        <div className="md:hidden bg-white border-b border-slate-200 px-4 py-3 pb-3 flex items-center justify-between sticky top-0 z-[11] shadow-sm" style={{ paddingTop: 'calc(0.75rem + env(safe-area-inset-top, 0px))' }}>
           <Link href="/" className="flex items-center gap-2 hover:opacity-80 transition-opacity">
             <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold text-lg shadow-md">
               P
