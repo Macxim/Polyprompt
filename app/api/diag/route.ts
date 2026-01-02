@@ -64,6 +64,13 @@ export async function GET() {
         spacesParsed: rawSpaces ? JSON.parse(rawSpaces).length : 0,
         agentsParsed: rawAgents ? JSON.parse(rawAgents).length : 0,
       };
+
+      diagnostics.migrationSummary = {
+        status: (diagnostics.userData.spacesParsed > 0) ? "SYNCED" : "PENDING_OR_EMPTY",
+        advice: (diagnostics.userData.spacesParsed === 0)
+          ? "Data exists only in LocalStorage. Check Browser Console [AppProvider] logs."
+          : "Data is successfully in Redis."
+      };
     }
     // --------------------------------
 

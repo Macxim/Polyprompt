@@ -41,6 +41,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       if (status === "authenticated" && session?.user?.id) {
+        console.log("[AppProvider] Authenticated. Fetching from API...");
         // 2. Fetch from API
         try {
           const [agentsRes, spacesRes] = await Promise.all([
@@ -49,8 +50,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           ]);
 
           if (!agentsRes.ok || !spacesRes.ok) {
-            console.error("API response error:", agentsRes.status, spacesRes.status);
-            // Hydrate with empty/default if API fails, so UI doesn't hang
+            console.error("[AppProvider] API response error:", agentsRes.status, spacesRes.status);
             dispatch({
               type: "HYDRATE_APP",
               payload: { ...initialAppState, agents: initialAppState.agents, spaces: [] }
@@ -58,53 +58,72 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             return;
           }
 
-          // ... existing code ...
           const agents = await agentsRes.json();
           const spaces = await spacesRes.json();
+          console.log(`[AppProvider] API data: ${agents.length} agents, ${spaces.length} spaces`);
 
           // 3. Migration logic
-          if (localState && (localState.agents.length > 0 || localState.spaces.length > 0)) {
-            // Push local data to API
-            try {
-                await Promise.all([
-                fetch("/api/agents", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(localState.agents),
-                }),
-                fetch("/api/spaces", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(localState.spaces),
-                }),
-                ]);
-            } catch (e) {
-                console.error("Migration failed", e);
-            }
+          // Only migrate if there are spaces OR if the local agents are different from default (more than 8)
+          const hasLocalData = localState && (localState.spaces.length > 0 || localState.agents.length > 8);
+          console.log("[AppProvider] Checking migration. Has local data?", !!hasLocalData);
 
-            // Clear local storage after successful migration (or attempt)
-            localStorage.removeItem("appState");
+          if (localState && hasLocalData) {
+            console.log("[AppProvider] Starting migration to Redis...");
+            try {
+                const [agRes, spRes] = await Promise.all([
+                  fetch("/api/agents", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(localState.agents),
+                  }),
+                  fetch("/api/spaces", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify(localState.spaces),
+                  }),
+                ]);
+
+                if (agRes.ok && spRes.ok) {
+                  console.log("[AppProvider] Migration successful. Clearing local cache.");
+                  localStorage.removeItem("appState");
+                } else {
+                  console.error("[AppProvider] Migration server error:", agRes.status, spRes.status);
+                  dispatch({
+                    type: "SET_BANNER",
+                    payload: { message: "Cloud sync failed. Data temporarily saved locally.", type: "error" }
+                  });
+                }
+            } catch (e) {
+                console.error("[AppProvider] Migration network failure:", e);
+                dispatch({
+                  type: "SET_BANNER",
+                  payload: { message: "Sync network error. Will retry on next load.", type: "error" }
+                });
+            }
 
             dispatch({
               type: "HYDRATE_APP",
               payload: { ...initialAppState, agents: localState.agents, spaces: localState.spaces }
             });
           } else {
+            console.log("[AppProvider] No migration needed. Hydrating with API data.");
             dispatch({
               type: "HYDRATE_APP",
               payload: { ...initialAppState, agents, spaces }
             });
           }
         } catch (err) {
-          console.error("Failed to sync with API", err);
-          // Fallback to initial state so app doesn't hang
+          console.error("[AppProvider] Failed to sync with API", err);
           dispatch({ type: "HYDRATE_APP", payload: initialAppState });
         }
       } else if (status === "unauthenticated") {
+        console.log("[AppProvider] Unauthenticated. Using localStorage if available.");
         // 4. Fallback to localStorage if not logged in (or first visit)
         if (localState) {
+          console.log(`[AppProvider] Hydrating with local data: ${localState.spaces.length} spaces`);
           dispatch({ type: "HYDRATE_APP", payload: localState });
         } else {
+          console.log("[AppProvider] No local data. Using initial state.");
           dispatch({ type: "HYDRATE_APP", payload: initialAppState });
         }
       }
@@ -122,8 +141,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     if (status === "authenticated" && session?.user?.id) {
       // Debounce API calls
       const timer = setTimeout(async () => {
+        console.log("[AppProvider] Auto-syncing state to API...");
         try {
-          await Promise.all([
+          const [agRes, spRes] = await Promise.all([
             fetch("/api/agents", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
@@ -135,8 +155,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               body: JSON.stringify(state.spaces),
             }),
           ]);
+          if (agRes.ok && spRes.ok) {
+            console.log("[AppProvider] Auto-sync successful.");
+          } else {
+            console.error("[AppProvider] Auto-sync failed:", agRes.status, spRes.status);
+          }
         } catch (err) {
-          console.error("Failed to auto-sync to API", err);
+          console.error("[AppProvider] Failed to auto-sync to API", err);
         }
       }, 1000); // 1 second debounce
 
