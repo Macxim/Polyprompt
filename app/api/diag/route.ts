@@ -45,6 +45,28 @@ export async function GET() {
       status: parseFloat(spend || "0") >= 30.0 ? "EXCEEDED" : "OK"
     };
 
+    // --- NEW: USER DATA INSPECTION ---
+    if (session?.user?.id) {
+      const userId = session.user.id;
+      const spacesKey = keys.spaces(userId);
+      const agentsKey = keys.agents(userId);
+
+      const [rawSpaces, rawAgents] = await Promise.all([
+        redis.get(spacesKey),
+        redis.get(agentsKey)
+      ]);
+
+      diagnostics.userData = {
+        spacesKey,
+        agentsKey,
+        spacesRaw: rawSpaces ? (rawSpaces.substring(0, 100) + "...") : "MISSING",
+        agentsRaw: rawAgents ? (rawAgents.substring(0, 100) + "...") : "MISSING",
+        spacesParsed: rawSpaces ? JSON.parse(rawSpaces).length : 0,
+        agentsParsed: rawAgents ? JSON.parse(rawAgents).length : 0,
+      };
+    }
+    // --------------------------------
+
   } catch (error: any) {
     diagnostics.redisTest.status = 'FAILED';
     diagnostics.redisTest.error = error.message;
