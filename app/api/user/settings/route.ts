@@ -15,7 +15,19 @@ export async function GET() {
   }
 
   const hasKey = await hasUserApiKey(session.user.id, session.user.email || undefined)
-  return NextResponse.json({ hasApiKey: hasKey })
+
+  let remainingMessages = null;
+  if (!hasKey) {
+    const dailyKey = keys.userDailyMessages(session.user.id);
+    const currentCountStr = await redis.get(dailyKey);
+    const currentCount = parseInt(currentCountStr || "0", 10);
+    remainingMessages = Math.max(0, 10 - currentCount); // 10 is the DAILY_MESSAGE_LIMIT
+  }
+
+  return NextResponse.json({
+    hasApiKey: hasKey,
+    remainingMessages
+  })
 }
 
 export async function POST(req: NextRequest) {

@@ -22,11 +22,8 @@ export async function getApiKeyForUser(userId: string, email?: string): Promise<
   // If user has their own key, use it
   if (userKey) return userKey
 
-  // Admin Override: If user is an admin, they can use the system key
-  const adminEmails = (process.env.ADMIN_EMAILS || "").split(",").map(e => e.trim().toLowerCase())
-  const isAdmin = email && adminEmails.includes(email.toLowerCase())
-
-  if (isAdmin && process.env.OPENAI_API_KEY) {
+  // Fallback to system key for everyone (rate limited in chat API)
+  if (process.env.OPENAI_API_KEY) {
     return process.env.OPENAI_API_KEY
   }
 

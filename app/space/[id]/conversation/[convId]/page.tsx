@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { useApp } from "@/app/state/AppProvider";
 import { Message } from "../../../../types";
@@ -49,6 +49,7 @@ export default function ConversationPage() {
   const [hasNewMessages, setHasNewMessages] = useState(false);
   const [shareCopied, setShareCopied] = useState(false);
   const [hasApiKey, setHasApiKey] = useState<boolean>(true); // Default to true to avoid flash
+  const [remainingMessages, setRemainingMessages] = useState<number | null>(null);
   const stopRef = useRef<boolean>(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
@@ -134,21 +135,23 @@ export default function ConversationPage() {
     inputRef.current?.focus();
   }, []);
 
+  const checkStatus = useCallback(async () => {
+    try {
+      const res = await fetch("/api/user/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setHasApiKey(data.hasApiKey);
+        setRemainingMessages(data.remainingMessages);
+      }
+    } catch (err) {
+      console.error("Failed to check status:", err);
+    }
+  }, []);
+
   // Check if user has an API key
   useEffect(() => {
-    const checkApiKey = async () => {
-      try {
-        const res = await fetch("/api/user/settings");
-        if (res.ok) {
-          const data = await res.json();
-          setHasApiKey(data.hasApiKey);
-        }
-      } catch (err) {
-        console.error("Failed to check API key:", err);
-      }
-    };
-    checkApiKey();
-  }, []);
+    checkStatus();
+  }, [checkStatus]);
 
   // Keyboard Shortcuts
   useEffect(() => {
@@ -325,10 +328,16 @@ export default function ConversationPage() {
               temperature: agent.temperature ?? 0.7,
             },
             conversationHistory: conversation.messages,
+            countAsUserMessage: agentsToInvoke.indexOf(agent) === 0,
           }),
         });
 
         if (!res.ok) {
+          if (res.status === 429) {
+            const data = await res.json();
+            setRemainingMessages(0);
+            throw new Error(data.message || "Daily limit reached");
+          }
           if (res.status === 403) {
              const errorData = await res.json();
              throw new Error(errorData.message || "API Key Required");
@@ -403,17 +412,26 @@ export default function ConversationPage() {
       }
     } catch (error: any) {
       console.error("Chat error:", error);
+
+      // Handle rate limit error
+      if (error.message.includes("Daily Limit Reached")) {
+        setRemainingMessages(0);
+      }
+
       dispatch({
         type: "SET_BANNER",
         payload: {
-          message: error.message === "API error: 401"
-            ? "Invalid API key. Please check your .env.local file."
-            : "Failed to get response. Please try again.",
+          message: error.message.includes("Daily Limit Reached")
+            ? error.message
+            : error.message === "API error: 401"
+              ? "Invalid API key. Please check your settings."
+              : "Failed to get response. Please try again.",
           type: "error"
         },
       });
     } finally {
       setIsTyping(false);
+      checkStatus();
     }
   };
 
@@ -598,6 +616,7 @@ export default function ConversationPage() {
                 temperature: agent.temperature ?? 0.7,
               },
               conversationHistory: history,
+              countAsUserMessage: SAFE_PLAN.indexOf(step) === 0,
             }),
           });
 
@@ -696,6 +715,7 @@ export default function ConversationPage() {
          abortControllerRef.current.abort();
          abortControllerRef.current = null;
       }
+      checkStatus();
     }
   };
 
@@ -1029,6 +1049,22 @@ export default function ConversationPage() {
       {/* Input Area */}
       <div className="p-4 bg-white border-t border-slate-200">
         <div className="max-w-4xl mx-auto relative">
+          {/* Remaining Messages Badge */}
+          {remainingMessages !== null && (
+            <div className="absolute bottom-full left-0 mb-3 pl-3 bg-white/80 backdrop-blur-sm border border-slate-200 rounded-full flex items-center gap-2 shadow-sm animate-in slide-in-from-bottom-1 duration-300">
+              <div className={`w-1.5 h-1.5 rounded-full ${remainingMessages > 0 ? 'bg-emerald-500' : 'bg-red-500'} ${remainingMessages > 0 && remainingMessages <= 3 ? 'animate-pulse' : ''}`} />
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
+                {remainingMessages === 0 ? "Daily limit reached" : `${remainingMessages} free messages left today`}
+              </span>
+              <button
+                onClick={() => router.push('/settings')}
+                className="text-xs py-1 pr-3 rounded-r-full cursor-pointer font-bold text-indigo-600 hover:text-indigo-700 hover:bg-indigo-600 hover:text-white ml-1 border-l border-slate-200 pl-2"
+              >
+                Go Unlimited
+              </button>
+            </div>
+          )}
+
           {/* Autocomplete Dropdown */}
           {showMentionDropdown && (() => {
             const allSpaceAgents = state.agents.filter((a) => (space.agentIds || []).includes(a.id));
@@ -1074,27 +1110,6 @@ export default function ConversationPage() {
             ) : null;
           })()}
 
-          {!hasApiKey && (
-            <div className="absolute bottom-full left-0 right-0 mb-4 animate-in slide-in-from-bottom-2 duration-300">
-              <div className="mx-auto max-w-2xl bg-amber-50 border border-amber-200 rounded-2xl p-4 shadow-lg flex items-start gap-4 ring-4 ring-amber-50/50">
-                <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600 shrink-0">
-                  <Key className="w-5 h-5" />
-                </div>
-                <div className="flex-1">
-                  <h4 className="font-bold text-amber-900 text-sm mb-1">OpenAI API Key Required</h4>
-                  <p className="text-amber-800 text-xs leading-relaxed font-medium">
-                    You need to add your own API key to start chatting. Your sessions are private and use your own credits.
-                  </p>
-                </div>
-                <button
-                  onClick={() => router.push("/settings")}
-                  className="px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-xs font-bold transition-colors shadow-sm shrink-0"
-                >
-                  Go to Settings
-                </button>
-              </div>
-            </div>
-          )}
 
           <div className="relative rounded-3xl bg-slate-100 border border-transparent focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-transparent focus-within:bg-white transition-all shadow-sm">
             <textarea

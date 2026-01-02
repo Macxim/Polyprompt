@@ -38,6 +38,10 @@ export const keys = {
   spaces: (userId: string) => `user:${userId}:spaces`,
   settings: (userId: string) => `user:${userId}:settings`,
   systemSpend: 'system:openai:spend',
+  userDailyMessages: (userId: string) => {
+    const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
+    return `user:${userId}:messages:${today}`;
+  },
 };
 
 // Data helpers

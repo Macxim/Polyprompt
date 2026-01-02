@@ -3,9 +3,11 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
 import posthog from "@/lib/posthog";
-import { keys, redis } from "@/lib/redis";
+import { keys, redis, ensureConnection } from "@/lib/redis";
 
 export const runtime = "nodejs";
+
+const DAILY_MESSAGE_LIMIT = 10;
 
 export async function POST(req: Request) {
   try {
@@ -14,7 +16,9 @@ export async function POST(req: Request) {
       return new Response("Unauthorized", { status: 401 });
     }
 
-    const { messages, agent, conversationHistory } = await req.json();
+    await ensureConnection();
+
+    const { messages, agent, conversationHistory, countAsUserMessage } = await req.json();
 
     // --- PHASE 2: BUDGET CHECK ---
     const BUDGET_LIMIT = 30.0;
@@ -32,19 +36,7 @@ export async function POST(req: Request) {
     }
     // ----------------------------
 
-    // Track message sent
-    posthog.capture({
-      distinctId: session.user.id,
-      event: 'message_sent',
-      properties: {
-        agent_id: agent.id,
-        agent_name: agent.name,
-        model: agent.model || "gpt-4o-mini",
-        message_length: messages[messages.length - 1].content.length
-      }
-    });
-
-    // Get user-specific or system API key (admin only)
+    // Get user-specific or system API key
     const apiKey = await getApiKeyForUser(session.user.id, session.user.email || undefined);
 
     if (!apiKey) {
@@ -56,6 +48,60 @@ export async function POST(req: Request) {
         headers: { "Content-Type": "application/json" }
       });
     }
+
+    // --- PHASE 3: RATE LIMITING (Free Tier Only) ---
+    // Check if user is using system API key (not BYOK)
+    const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
+    let isLimitReached = false;
+
+    if (isUsingSystemKey) {
+      const dailyKey = keys.userDailyMessages(session.user.id);
+      const currentCountStr = await redis.get(dailyKey);
+      const currentCount = parseInt(currentCountStr || "0", 10);
+
+      if (countAsUserMessage) {
+        // Enforce strict limit for new messages
+        if (currentCount >= DAILY_MESSAGE_LIMIT) {
+          isLimitReached = true;
+        } else {
+          // Increment immediately to prevent race conditions or bypass
+          const newCount = await redis.incr(dailyKey);
+          if (newCount === 1) {
+            await redis.expire(dailyKey, 86400);
+          }
+        }
+      } else {
+        // For subsequent calls (second agent etc), allow if count is within limit + overflow for the current batch
+        if (currentCount > DAILY_MESSAGE_LIMIT) {
+          isLimitReached = true;
+        }
+      }
+
+      if (isLimitReached) {
+        return new Response(JSON.stringify({
+          error: "Daily Limit Reached",
+          message: `You've used all ${DAILY_MESSAGE_LIMIT} free messages for today. Add your own OpenAI API key in Settings for unlimited access.`,
+          remainingMessages: 0
+        }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
+    // ------------------------------------------------
+
+    // Track message sent
+    posthog.capture({
+      distinctId: session.user.id,
+      event: 'message_sent',
+      properties: {
+        agent_id: agent.id,
+        agent_name: agent.name,
+        model: agent.model || "gpt-4o-mini",
+        message_length: messages[messages.length - 1].content.length,
+        is_byok: !isUsingSystemKey
+      }
+    });
 
     const openai = new OpenAI({ apiKey });
 
@@ -141,6 +187,7 @@ export async function POST(req: Request) {
             if (cost > 0) {
               await redis.incrByFloat(keys.systemSpend, cost);
             }
+
 
             // Send token usage as a special marker at the end
             controller.enqueue(encoder.encode(`\n__TOKENS__${JSON.stringify(tokenUsage)}`));
