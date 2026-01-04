@@ -17,7 +17,16 @@ export type Action =
     }
   | {
       type: "UPDATE_MESSAGE";
-      payload: { spaceId: string; conversationId: string; messageId: string; content: string; tokens?: { prompt: number; completion: number; total: number } };
+      payload: {
+        spaceId: string;
+        conversationId: string;
+        messageId: string;
+        content: string;
+        tokens?: { prompt: number; completion: number; total: number };
+        stance?: string;
+        round?: number;
+        phase?: string;
+      };
     }
   | {
       type: "RENAME_CONVERSATION";

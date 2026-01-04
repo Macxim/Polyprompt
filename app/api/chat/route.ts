@@ -18,7 +18,7 @@ export async function POST(req: Request) {
 
     await ensureConnection();
 
-    const { messages, agent, conversationHistory, countAsUserMessage } = await req.json();
+    const { messages, agent, conversationHistory, countAsUserMessage, debateTurn, targetPosition, options, round, phase, previousAgentStance, previousAgentName } = await req.json();
 
     // --- PHASE 2: BUDGET CHECK ---
     const BUDGET_LIMIT = 30.0;
@@ -50,7 +50,6 @@ export async function POST(req: Request) {
     }
 
     // --- PHASE 3: RATE LIMITING (Free Tier Only) ---
-    // Check if user is using system API key (not BYOK)
     const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
     let isLimitReached = false;
 
@@ -60,18 +59,15 @@ export async function POST(req: Request) {
       const currentCount = parseInt(currentCountStr || "0", 10);
 
       if (countAsUserMessage) {
-        // Enforce strict limit for new messages
         if (currentCount >= DAILY_MESSAGE_LIMIT) {
           isLimitReached = true;
         } else {
-          // Increment immediately to prevent race conditions or bypass
           const newCount = await redis.incr(dailyKey);
           if (newCount === 1) {
             await redis.expire(dailyKey, 86400);
           }
         }
       } else {
-        // For subsequent calls (second agent etc), allow if count is within limit + overflow for the current batch
         if (currentCount > DAILY_MESSAGE_LIMIT) {
           isLimitReached = true;
         }
@@ -99,67 +95,239 @@ export async function POST(req: Request) {
         agent_name: agent.name,
         model: agent.model || "gpt-4o-mini",
         message_length: messages[messages.length - 1].content.length,
-        is_byok: !isUsingSystemKey
+        is_byok: !isUsingSystemKey,
+        debate_turn: debateTurn,
+        target_position: targetPosition
       }
     });
 
     const openai = new OpenAI({ apiKey });
 
-    // Validate required fields
-    if (!messages || !agent) {
-      return new Response("Missing required fields", { status: 400 });
+    // Validate turn: Check if a response aligns with a position
+    if (debateTurn === 'validate') {
+      const contentToValidate = messages[messages.length - 1].content;
+      const validationPrompt = `Is the following response arguing FOR "${targetPosition}" or AGAINST it?
+
+STRICT RULES FOR VALIDITY:
+1. It MUST defend "${targetPosition}" forcefully.
+2. It MUST NOT concede that "${options?.find((o: string) => o !== targetPosition)}" has good points.
+3. It MUST NOT be neutral, "balanced", or say "it depends".
+4. If it starts by saying "${targetPosition}" is a mistake or flawed, it is INVALID.`;
+
+      const check = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: validationPrompt },
+          { role: "user", content: contentToValidate }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      return new Response(check.choices[0].message.content, {
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
-    // Build the verbosity instructions
-    const verbosityMap = {
-      concise: "Keep responses brief and punchy. Use short paragraphs.",
-      balanced: "Provide thoughtful responses but keep them concise. Use short paragraphs (2-3 sentences max) for readability.",
-      detailed: "Give comprehensive responses. IMPORTANT: Break text into many short paragraphs to avoid walls of text."
+    // Validate Synthesis: Check for bias and format
+    if (debateTurn === 'validate-synthesis') {
+      const contentToValidate = messages[messages.length - 1].content;
+      const optA = options?.[0] || "Option A";
+      const optB = options?.[1] || "Option B";
+
+      const validationPrompt = `Evaluate this debate synthesis for neutrality and format.
+
+Rules for VALID Synthesis:
+1. NO SIDE-PICKING: It must not say one option is better, superior, or recommended.
+2. FORMAT: It must contain "Choose ${optA} if:" and "Choose ${optB} if:".
+3. BALANCE: It should provide equal weight to both sides.
+4. NO ADVOCACY: Avoid phrases like "the best option is" or "clearly superior".
+
+Respond with ONLY a JSON object:
+{
+  "isValid": true/false,
+  "reason": "explanation of bias or format failure",
+  "biasDetected": "A", "B", or "none"
+}`;
+
+      const check = await openai.chat.completions.create({
+        model: "gpt-4o-mini",
+        messages: [
+          { role: "system", content: validationPrompt },
+          { role: "user", content: contentToValidate }
+        ],
+        response_format: { type: "json_object" }
+      });
+
+      return new Response(check.choices[0].message.content, {
+        headers: { "Content-Type": "application/json" }
+      });
+    }
+
+    // Agent-specific rhetorical patterns
+    const AGENT_STYLES: Record<string, string> = {
+      'strategic_analyst': "Style: Professional, data-focused, uses mental models. Key phrases: 'The data suggests', 'Historically', 'Research shows'. Avoid: Emotional appeals, being overly agreeable.",
+      'devils_advocate': "Style: Provocative, contrarian, challenges assumptions. Key phrases: 'Everyone assumes X, but...', 'What if we flip this?', 'That's a lazy assumption'. Avoid: Being agreeable. NEVER say 'they have a point' or 'it depends'.",
+      'practical_realist': "Style: Skeptical, risk-focused, pragmatic. Key phrases: 'In reality...', 'The hidden cost is...', 'Most people overlook'. Avoid: Excessive optimism or corporate jargon.",
+      'research_synthesizer': "Style: Pattern-finder, integrative, connects ideas. Key phrases: 'Looking across multiple angles...', 'Studies show', 'The pattern indicates'. Avoid: Surface-level analysis or choosing a middle ground."
     };
-    const verbosityInstruction = verbosityMap[agent.verbosity as keyof typeof verbosityMap] || verbosityMap.balanced;
+
+    const opponentPosition = targetPosition ? (options || []).find((o: string) => o !== targetPosition) : null;
+
+    const lastOpponentMessage = (conversationHistory || [])
+      .filter((m: any) => m.role === 'agent' && m.agentName !== agent.name)
+      .pop()?.content || "the previous point";
+
+    const PHASE_PROMPTS: Record<string, string> = {
+      'OPENING': "Set up your core argument clearly and forcefully. Establish your territory.",
+      'CONFRONTATION': `The opposing agent (${previousAgentName || 'Opponent'}) just argued:
+"${lastOpponentMessage.substring(0, 300)}..."
+
+Your job: ATTACK their specific arguments. Don't just list more generic pros of your position.
+
+DO:
+- Quote specific claims they made (e.g. "${previousAgentName} claims X, but...")
+- Explain why those claims are wrong or exaggerated
+- Use concrete examples or statistics to refute them
+
+DON'T:
+- Just list generic benefits of your position again
+- Ignore what they just said
+- Repeat your Round 1 arguments
+
+Example Rebuttal:
+"${previousAgentName} claims that [Point A], but this ignores [Fact B]. In reality, [Counter-Example C]."`,
+      'SYNTHESIS': "This is the final resolution. Do NOT introduce new options. Be decisive."
+    };
+
+    const previousPoints = (conversationHistory || [])
+      .filter((m: any) => m.role === 'agent')
+      .map((m: any) => m.content.substring(0, 200))
+      .join('\n- ');
+
+    const argumentMemoryInstruction = previousPoints ? `\n\nARGUMENTS ALREADY MADE:\n- ${previousPoints}\n\nSTRICT RULE: Do NOT repeat these points. You must introduce a NEW angle, a NEW perspective, or focus on a different tradeoff. Repetition is a failure.` : "";
+
+    const positionAdvocacy = targetPosition ? `
+CRITICAL - YOUR ASSIGNED POSITION (NEVER CHANGES):
+- You are defending: ${targetPosition}
+${opponentPosition ? `- You are arguing AGAINST: ${opponentPosition}` : ""}
+
+RULES FOR THIS TURN:
+1. You MUST defend ${targetPosition} aggressively.
+2. You CANNOT be neutral or concede. Even when acknowledging opponent points, always pivot back to why ${targetPosition} is superior.
+3. DO NOT say "they have good points" and then agree.
+4. Your goal is to WIN for ${targetPosition}.` : "";
+
+    const synthesisPrompt = `You are a neutral financial and strategic analyst reviewing a debate.
+
+Based ONLY on the options discussed: ${(options || []).join(', ')}.
+
+Your job: Create a NEUTRAL synthesis that helps the user decide.
+
+Format (STRICT):
+**Key Tradeoff:** [One sentence summary]
+
+**Choose [Option A] if:**
+- [Specific condition 1]
+- [Specific condition 2]
+- [Specific condition 3]
+
+**Choose [Option B] if:**
+- [Specific condition 1]
+- [Specific condition 2]
+- [Specific condition 3]
+
+**Critical Numbers:**
+[Include actual calculations or financial metrics if relevant, otherwise state 'N/A']
+
+**Assumptions to Challenge:**
+- [Reflection Question 1]
+- [Reflection Question 2]
+
+Rules:
+- Keep it under 150 words.
+- Be specific, not vague.
+- DO NOT pick a side.
+- Use explicit "Choose X if:" headers.`;
+    const verbosityInstruction = `
+HARD LIMIT: 100 words MAX.
+Rules:
+- Keep each point to 1-2 sentences.
+- Use bold headers for each argument.
+- No fluff, no stalling, no repetition.
+- Be punchy and direct.
+
+Good Example (Concise):
+"**Transparent pricing builds trust.** Customers respect honesty over hidden fees. **Simplicity wins.** Complicated tiers confuse users."
+
+Bad Example (Too long):
+"Pricing transparency is the cornerstone of trust. By openly sharing costs, early-stage SaaS companies demonstrate honesty and build immediate credibility..."`;
+
+    // Final consolidated debate context
+    const isSummary = debateTurn === 'summary';
+    const debateInstruction = isSummary ? synthesisPrompt : `
+${agent.id ? (AGENT_STYLES[agent.id] || "") : ""}
+PHASE: ${phase || "DISCUSSION"}
+TASK: ${PHASE_PROMPTS[phase as string] || "Engage in a critical debate."}
+${positionAdvocacy}
+${debateTurn && !isSummary ? argumentMemoryInstruction : ""}
+`.trim();
 
     // Build the conversation context for OpenAI
     const openaiMessages = [
       {
         role: "system" as const,
-        content: `${agent.persona || "You are a helpful AI assistant."}\n\nIMPORTANT: ${verbosityInstruction}\n\nFORMATTING RULES:\n- Use short paragraphs (max 2-3 sentences).\n- Use lists and headers where appropriate to break up text.\n- Avoid huge blocks of text.`,
+        content: `${agent.persona || "You are a helpful AI assistant."}
+
+DEBATE MODE ACTIVE:
+${debateInstruction}
+
+CONCISENESS RULES:
+${verbosityInstruction}
+
+FORMATTING RULES:
+- Use short paragraphs (max 1-2 sentences).
+- Use lists and bold headers to break up text.
+- NEVER exceed 100 words per response.`,
       },
-      // Include previous conversation history
-      ...(conversationHistory || []).map((msg: any) => ({
-        role: msg.role === "user" ? ("user" as const) : ("assistant" as const),
-        content: msg.content,
-      })),
-      // Add the new user message
+      ...(conversationHistory || []).map((msg: any) => {
+        // ANNOTATE HISTORY: "Lock" the context by explicitly labeling the stance of previous messages
+        // This prevents the model from "forgetting" who argued for what.
+        const stanceLabel = msg.stance ? ` [Defending: ${msg.stance}]` : "";
+        const roleLabel = msg.agentName ? `${msg.agentName}${stanceLabel}: ` : "";
+
+        return {
+          role: msg.role === "user" ? ("user" as const) : ("assistant" as const),
+          content: `${roleLabel}${msg.content}`,
+        };
+      }),
       {
         role: "user" as const,
         content: messages[messages.length - 1].content,
       },
+      // FINAL REINFORCEMENT: The last word overrides conflicting history
+      ...(targetPosition ? [{
+        role: "system" as const,
+        content: `URGENT REMINDER: You are defending ${targetPosition}. Do NOT agree with the opponent. Do NOT switch sides.`
+      }] : [])
     ];
 
-    // Call OpenAI API with streaming and usage tracking
     const selectedModel = agent.model || "gpt-4o-mini";
     const response = await openai.chat.completions.create({
       model: selectedModel,
       messages: openaiMessages,
-      temperature: agent.temperature ?? 0.7,
+      temperature: debateTurn ? 0.8 : (agent.temperature ?? 0.7),
       stream: true,
-      stream_options: { include_usage: true }, // Request usage data in stream
+      stream_options: { include_usage: true },
     });
 
-    // Create a readable stream for the response
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
           let tokenUsage: any = null;
-
           for await (const chunk of response) {
             const content = chunk.choices[0]?.delta?.content || "";
-            if (content) {
-              controller.enqueue(encoder.encode(content));
-            }
-
-            // Capture token usage from the final chunk
+            if (content) controller.enqueue(encoder.encode(content));
             if (chunk.usage) {
               tokenUsage = {
                 prompt: chunk.usage.prompt_tokens,
@@ -169,35 +337,20 @@ export async function POST(req: Request) {
             }
           }
 
-          // --- PHASE 2: CALCULATE AND UPDATE SPEND ---
           if (tokenUsage) {
-            // Pricing per 1M tokens (Nov 2024 ballpark)
-            // gpt-4o-mini: $0.150 / 1M input, $0.600 / 1M output
-            // gpt-4o: $2.50 / 1M input, $10.00 / 1M output
             let cost = 0;
             if (selectedModel.includes("gpt-4o-mini")) {
               cost = (tokenUsage.prompt * 0.15 / 1000000) + (tokenUsage.completion * 0.60 / 1000000);
             } else if (selectedModel.includes("gpt-4o")) {
               cost = (tokenUsage.prompt * 2.50 / 1000000) + (tokenUsage.completion * 10.00 / 1000000);
             } else {
-              // Default to mini pricing if unknown
               cost = (tokenUsage.prompt * 0.15 / 1000000) + (tokenUsage.completion * 0.60 / 1000000);
             }
-
-            if (cost > 0) {
-              await redis.incrByFloat(keys.systemSpend, cost);
-            }
-
-
-            // Send token usage as a special marker at the end
+            if (cost > 0) await redis.incrByFloat(keys.systemSpend, cost);
             controller.enqueue(encoder.encode(`\n__TOKENS__${JSON.stringify(tokenUsage)}`));
           }
-          // -------------------------------------------
-
           controller.close();
-        } catch (error) {
-          controller.error(error);
-        }
+        } catch (error) { controller.error(error); }
       },
     });
 
@@ -209,18 +362,8 @@ export async function POST(req: Request) {
     });
   } catch (error: any) {
     console.error("Chat API error:", error);
-
-    // Handle specific OpenAI errors
-    if (error?.status === 401) {
-      return new Response("Invalid API key", { status: 401 });
-    }
-
-    if (error?.status === 429) {
-      return new Response("Rate limit exceeded", { status: 429 });
-    }
-
-    return new Response(error?.message || "Internal server error", {
-      status: 500,
-    });
+    if (error?.status === 401) return new Response("Invalid API key", { status: 401 });
+    if (error?.status === 429) return new Response("Rate limit exceeded", { status: 429 });
+    return new Response(error?.message || "Internal server error", { status: 500 });
   }
 }

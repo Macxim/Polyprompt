@@ -130,7 +130,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
     }
 
     case "UPDATE_MESSAGE": {
-      const { spaceId, conversationId, messageId, content, tokens } = action.payload;
+      const { spaceId, conversationId, messageId, content, tokens, stance, round, phase } = action.payload;
 
       return {
         ...state,
@@ -144,7 +144,14 @@ export const reducer = (state: AppState, action: Action): AppState => {
                 ...conv,
                 messages: conv.messages.map((msg) =>
                   msg.id === messageId
-                    ? { ...msg, content, ...(tokens && { tokens }) }
+                    ? {
+                        ...msg,
+                        content,
+                        ...(tokens && { tokens }),
+                        ...(stance && { stance }),
+                        ...(round !== undefined && { round }),
+                        ...(phase !== undefined && { phase })
+                      }
                     : msg
                 ),
                 updatedAt: Date.now(),

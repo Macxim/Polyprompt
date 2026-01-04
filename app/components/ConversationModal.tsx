@@ -19,7 +19,6 @@ export default function ConversationModal({ spaceId }: Props) {
   const [view, setView] = useState<"templates" | "custom">("templates");
   const [title, setTitle] = useState("");
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>([]);
-  const [autoMode, setAutoMode] = useState(false);
 
   const [titleError, setTitleError] = useState("");
 
@@ -31,7 +30,6 @@ export default function ConversationModal({ spaceId }: Props) {
       setView("templates");
       setTitle("");
       setSelectedAgentIds([]);
-      setAutoMode(false);
       setTitleError("");
     }
   }, [state.ui.isConversationModalOpen]);
@@ -53,7 +51,6 @@ export default function ConversationModal({ spaceId }: Props) {
       template_id: template.id,
       template_name: template.name,
       space_id: spaceId,
-      auto_mode_enabled: template.autoModeEnabled
     });
 
     // 1. Determine agents to include
@@ -101,24 +98,12 @@ export default function ConversationModal({ spaceId }: Props) {
       template_name: template.name
     });
 
-    // Track auto mode if enabled
-    if (template.autoModeEnabled) {
-      posthog.capture('auto_mode_used', {
-        space_id: spaceId,
-        conversation_id: newConversationId,
-        template_name: template.name
-      });
-      dispatch({ type: "SET_BANNER", payload: { message: `Started "${template.name}" template.`, type: "success" } });
-    } else {
-      dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
-    }
-
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });
 
     // Construct URL with prompt if exists
     let url = `/space/${spaceId}/conversation/${newConversationId}`;
     const params = new URLSearchParams();
-    if (template.autoModeEnabled) params.set('auto', 'true');
+    if (template.selectedAgents.length >= 2) params.set('auto', 'true');
     if (template.startingPrompt) params.set('prompt', template.startingPrompt);
 
     const queryString = params.toString();
@@ -180,17 +165,9 @@ export default function ConversationModal({ spaceId }: Props) {
       from_template: false
     });
 
-    // Track auto mode if enabled
-    if (autoMode) {
-      posthog.capture('auto_mode_used', {
-        space_id: spaceId,
-        conversation_id: newConversationId
-      });
-    }
-
     dispatch({ type: "SET_BANNER", payload: { message: "Conversation created.", type: "success" } });
     dispatch({ type: "CLOSE_CONVERSATION_MODAL" });
-    router.push(`/space/${spaceId}/conversation/${newConversationId}${autoMode ? "?auto=true" : ""}`);
+    router.push(`/space/${spaceId}/conversation/${newConversationId}`);
   };
 
   const toggleAgentSelection = (agentId: string) => {
@@ -382,28 +359,6 @@ export default function ConversationModal({ spaceId }: Props) {
                 </div>
               </div>
 
-              {/* Auto Mode Toggle */}
-               <label htmlFor="autoMode" className={`flex items-center gap-4 p-5 rounded-2xl cursor-pointer border transition-all ${autoMode ? 'bg-indigo-600 border-indigo-600 shadow-lg shadow-indigo-200' : 'bg-slate-50 border-slate-200 hover:border-slate-300'}`}>
-                 <div className="relative">
-                   <input
-                      type="checkbox"
-                      id="autoMode"
-                      checked={autoMode}
-                      onChange={(e) => setAutoMode(e.target.checked)}
-                      className="peer sr-only"
-                   />
-                   <div className={`w-12 h-6 rounded-full transition-colors relative ${autoMode ? 'bg-indigo-500/50' : 'bg-slate-300'}`}>
-                     <div className={`absolute top-1 left-1 w-4 h-4 bg-white rounded-full transition-transform duration-200 transform ${autoMode ? 'translate-x-6' : 'translate-x-0'} shadow-sm`}></div>
-                   </div>
-                 </div>
-                 <div className="flex-1">
-                    <div className={`font-bold text-sm ${autoMode ? 'text-white' : 'text-slate-800'}`}>Enable Auto-Mode</div>
-                    <div className={`text-xs ${autoMode ? 'text-indigo-100' : 'text-slate-500'}`}>Agents will discuss automatically after your first message</div>
-                 </div>
-                 {autoMode && (
-                   <div className="text-xl animate-bounce">✨</div>
-                 )}
-               </label>
 
             </div>
           )}

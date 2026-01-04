@@ -13,7 +13,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const { prompt, agents, mode } = await req.json();
+    const { prompt, agents } = await req.json();
 
     // Get user-specific or system API key (admin only)
     const apiKey = await getApiKeyForUser(session.user.id, session.user.email || undefined);
@@ -34,63 +34,71 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: "Missing prompt or agents" }, { status: 400 });
     }
 
-    // Determine number of rounds based on mode
-    // Quick: 1 round + synthesis (approx 3-4 turns)
-    // Deep: 2 rounds + synthesis (approx 6-8 turns)
-    const rounds = mode === 'deep' ? 2 : 1;
+    // System prompt to orchestrate the discussion as a Lean Debate Director
+    const systemPrompt = `You are the "Lean Debate Director". Your goal is to orchestrate a high-speed, high-impact 5-turn debate.
 
-    // System prompt to orchestrate the discussion
-    const systemPrompt = `You are an expert conversation orchestrator and debate moderator.
-Your goal is to plan a multi-turn discussion between AI agents to thoroughly analyze a user's topic.
-
-User Topic: "${prompt}"
+User's Question: "${prompt}"
 
 Available Agents:
 ${agents.map((a: any) => `- ID: ${a.id}, Name: ${a.name}, Persona: ${a.persona}`).join('\n')}
 
-Plan a discussion with the following structure:
-1. Select 2-3 most relevant agents from the list to discuss this topic.
-2. If the user's topic implies a specific role not present, select the "most adaptable" agent but instruct them to adopt that perspective.
-3. Create a step-by-step conversation plan.
-4. Each step must have:
-   - "agentId": The ID of the agent to speak.
-   - "instruction": Specific instruction for what this agent should focus on in this turn.
-   - "type": Either "discussion" (normal turn) or "summary" (final synthesis).
+Required Structure (EXACTLY 5 TURNS):
+1. Round 1: OPENING (Turns 1-2): Two different agents state their core case for opposite sides.
+2. Round 2: REBUTTAL (Turns 3-4): The same two agents respond to each other's points.
+3. Round 3: SYNTHESIS (Turn 5): A neutral, actionable wrap-up.
 
-For "quick" mode, plan roughly ${rounds * agents.length} turns plus a final synthesis.
-For "deep" mode, allow for back-and-forth debate.
-The FINAL step MUST have "type": "summary". Do NOT include any other "summary" steps.
+Director Guidelines:
+- IDENTIFY OPTIONS: Extract exactly 2 core options from the question.
+- ASSIGN SIDES: Ensure Agent A defends Option 1 and Agent B defends Option 2 consistently.
+- BREVITY: Instruct agents to keep responses to 100 words max.
+- CONSISTENCY: An agent MUST NOT switch sides.
 
-Return ONLY the JSON array of steps. No markdown formatting.
-Example format:
-[
-  { "agentId": "agent_123", "instruction": "...", "type": "discussion" },
-  { "agentId": "agent_456", "instruction": "...", "type": "summary" }
-]`;
+Output JSON Format:
+{
+  "options": ["Option A", "Option B"],
+  "plan": [
+    {
+      "round": 1,
+      "phase": "OPENING",
+      "agentId": "agent_id",
+      "targetPosition": "Option A",
+      "instruction": "State your 100-word opening case for Option A. Be punchy.",
+      "type": "discussion"
+    },
+    ...
+    {
+      "round": 3,
+      "phase": "SYNTHESIS",
+      "agentId": "agent_id",
+      "targetPosition": null,
+      "instruction": "Summarize tradeoffs in under 150 words.",
+      "type": "summary"
+    }
+  ]
+}`;
 
     const response = await openai.chat.completions.create({
       model: "gpt-4o-mini",
       messages: [
         { role: "system", content: systemPrompt },
-        { role: "user", content: "Plan the discussion." }
+        { role: "user", content: "Plan the debate." }
       ],
       temperature: 0.7,
+      response_format: { type: "json_object" }
     });
 
     const content = response.choices[0].message.content;
-
-    // Clean up markdown code blocks if present
-    const cleanContent = content?.replace(/```json/g, '').replace(/```/g, '').trim();
-
-    let plan;
+    let data;
     try {
-      plan = JSON.parse(cleanContent || "[]");
+      data = JSON.parse(content || "{}");
+      // Basic validation
+      if (!data.options || !data.plan) throw new Error("Missing options or plan");
     } catch (e) {
       console.error("Failed to parse plan JSON", content);
       return NextResponse.json({ error: "Failed to generate plan" }, { status: 500 });
     }
 
-    return NextResponse.json({ plan });
+    return NextResponse.json(data);
 
   } catch (error: any) {
     console.error("Auto-plan API error:", error);

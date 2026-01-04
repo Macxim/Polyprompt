@@ -7,13 +7,16 @@ import AvatarDisplay from "./AvatarDisplay";
 import ThinkingIndicator from "./ThinkingIndicator";
 import { useApp } from "../state/AppProvider";
 
+import StanceBadge from "./StanceBadge";
+
 type ChatMessageProps = {
   msg: Message;
   agents: Agent[];
+  allMessages?: Message[];
 };
 
 // Memoize ChatMessage to avoid expensive re-renders on every streaming chunk
-const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
+const ChatMessage = React.memo(({ msg, agents, allMessages = [] }: ChatMessageProps) => {
   const { dispatch } = useApp();
   const [copied, setCopied] = useState(false);
 
@@ -28,6 +31,8 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
   };
 
   const agentInfo = msg.role === "agent" ? agents.find(a => a.id === msg.agentId) : null;
+  const respondingTo = msg.respondingToId ? allMessages.find(m => m.id === msg.respondingToId) : null;
+  const respondingToName = respondingTo?.agentName || (respondingTo?.role === 'user' ? 'User' : null);
 
   return (
     <div
@@ -78,10 +83,21 @@ const ChatMessage = React.memo(({ msg, agents }: ChatMessageProps) => {
               size="md"
               className="mt-0.5"
             />
-            <div className="flex flex-col min-w-0">
-               <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none mb-1">
-                 {msg.agentName}
-               </span>
+            <div className="flex flex-col min-w-0 flex-1">
+               <div className="flex items-center gap-2 mb-1">
+                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none">
+                   {msg.agentName}
+                 </span>
+                 <StanceBadge stance={msg.stance} round={msg.round} phase={msg.phase} />
+               </div>
+
+               {msg.respondingToId && respondingToName && (
+                 <div className="text-[10px] text-indigo-500/70 font-bold mb-1 flex items-center gap-1">
+                   <span className="opacity-50">↳</span>
+                   Responding to {respondingToName}
+                 </div>
+               )}
+
                {agentInfo?.persona && (
                   <span className="text-[12px] text-slate-400 font-medium leading-tight">
                     {agentInfo.persona}
