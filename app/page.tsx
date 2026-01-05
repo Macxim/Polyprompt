@@ -170,14 +170,11 @@ export default function Home() {
                 </div>
 
                 <h1 className="text-4xl sm:text-6xl md:text-7xl font-extrabold text-slate-900 tracking-tight mb-6 animate-in fade-in slide-in-from-bottom-4 duration-700 leading-[1.1]">
-                  Your AI Workforce, <br />
-                  <span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-blue-500">
-                    Orchestrated.
-                  </span>
+                    Pure Debate Platform
                 </h1>
 
-                <p className="text-slate-500 text-lg md:text-xl max-w-2xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 leading-relaxed font-medium px-4 sm:px-0">
-                  Polyprompt provides specialized spaces to organize AI agents, projects, and multi-agent discussions in one seamless environment.
+                <p className="text-slate-500 text-lg md:text-xl max-w-3xl mx-auto mb-10 animate-in fade-in slide-in-from-bottom-6 duration-1000 leading-relaxed font-medium px-4 sm:px-0">
+                  AI agents debate both sides of your toughest decisions. <br />Financial choices. Career moves. Business strategy. Get real debate, now.
                 </p>
 
                 {/* Premium Create Space Area */}
