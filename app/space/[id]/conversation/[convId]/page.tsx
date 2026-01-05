@@ -452,7 +452,7 @@ export default function ConversationPage() {
 
       setIsThinking(true);
 
-      const planRes = await fetch("/api/auto-plan", {
+      const planRes = await fetch("/api/debate-plan", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
