@@ -236,7 +236,7 @@ export default function Home() {
               </div>
             </section>
 
-            <section className="bg-slate-50/50 border-y border-slate-100 py-10 px-8">
+            <section className="bg-slate-50/50 py-10 px-8">
               <div className="max-w-6xl mx-auto">
                 <div className="text-center mb-12">
                   <h2 className="text-2xl font-bold text-slate-800 tracking-tight mb-2">Platform Capabilities</h2>
@@ -274,6 +274,73 @@ export default function Home() {
                     </p>
                   </div>
                 </div>
+              </div>
+            </section>
+
+            <section className="bg-slate-50/50 py-10 px-8">
+              <div className="max-w-6xl mx-auto">
+                <div className="text-center mb-12">
+                  <h2 className="text-2xl font-bold text-slate-800 tracking-tight mb-2">Perfect For Tough Decisions</h2>
+                  <p className="text-slate-500">When the stakes are high and you need to see both sides clearly </p>
+                </div>
+
+                <div className="grid md:grid-cols-2 gap-6">
+                <div className="glass-card p-6 rounded-3xl border border-slate-200/60 bg-white/50 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 hover:border-indigo-300">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-indigo-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">💰</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-2">Financial Decisions</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                "Buy house or rent?" Get breakeven analysis, risk assessment, and life-stage criteria.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-card p-6 rounded-3xl border border-slate-200/60 bg-white/50 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 hover:border-purple-300">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">💼</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-2">Career Moves</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                "Take promotion or stay?" Agents debate growth vs stability based on your situation.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-card p-6 rounded-3xl border border-slate-200/60 bg-white/50 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 hover:border-emerald-300">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-emerald-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">🚀</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-2">Business Strategy</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                "Go B2B or B2C?" Get market analysis, scalability debate, and decision framework.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div className="glass-card p-6 rounded-3xl border border-slate-200/60 bg-white/50 shadow-sm transition-all hover:shadow-md hover:-translate-y-1 hover:border-amber-300">
+                    <div className="flex items-start gap-4">
+                        <div className="w-10 h-10 bg-amber-100 rounded-lg flex items-center justify-center flex-shrink-0">
+                            <span className="text-xl">💻</span>
+                        </div>
+                        <div>
+                            <h3 className="font-bold text-slate-900 mb-2">Tech Choices</h3>
+                            <p className="text-slate-500 text-sm leading-relaxed">
+                                "React or Vue?" Debate job market, learning curve, ecosystem maturity with data.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
               </div>
             </section>
           </>
