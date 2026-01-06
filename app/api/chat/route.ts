@@ -11,174 +11,116 @@ const DAILY_MESSAGE_LIMIT = 10;
 const BUDGET_LIMIT = 30.0;
 
 // ============================================================================
-// TYPE-SPECIFIC CONFIGURATIONS
+// UNIVERSAL INTELLIGENT SYNTHESIS
 // ============================================================================
 
-const TYPE_SPECIFIC_GUIDANCE = {
-  FINANCIAL: `CRITICAL for financial questions:
-- Include specific numbers (ROI, breakeven, compound interest)
-- Address risk tolerance explicitly
-- Compare opportunity costs using actual calculations
-- Example: "$1M at 7% = $70k/year forever vs $52k/year from weekly payments"
-- DO NOT say "Critical Numbers: N/A" - always calculate`,
+function getUniversalSynthesisPrompt(question: string, options: string[]): string {
+  const containsMoney = /\$|dollar|money|income|salary|pay|cost|price|equity/i.test(
+    question + ' ' + options.join(' ')
+  );
 
-  CAREER: `CRITICAL for career questions:
-- Consider life stage (20s vs 40s) and financial obligations (dependents, mortgage)
-- Evaluate skill development vs immediate income tradeoffs
-- Discuss burnout risk, work-life balance, long-term trajectory
-- Be specific about conditions: "If you're under 30 with 6mo savings" not "if you value growth"`,
+  return `You are synthesizing a debate for this question:
+"${question}"
 
-  RELATIONSHIP: `CRITICAL for relationship questions:
-- Be sensitive, non-judgmental, and empathetic
-- Focus on behavioral patterns, not isolated incidents
-- Distinguish between fixable communication issues vs fundamental incompatibility
-- Suggest professional help if red flags appear (abuse, addiction, severe conflict)
-- NEVER be prescriptive - provide reflection prompts`,
+Options debated: ${options.join(' vs ')}
 
-  TECHNOLOGY: `CRITICAL for tech questions:
-- Cite specific technical advantages/tradeoffs with examples
-- Mention job market data (salary ranges, demand trends)
-- Compare ecosystem maturity, learning curves, performance benchmarks
-- Be opinionated but fair: "React has 3x more jobs than Vue on LinkedIn"`,
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+YOUR JOB: BE SO SPECIFIC THAT READERS CAN IMMEDIATELY DECIDE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-  LIFESTYLE: `CRITICAL for lifestyle questions:
-- Focus on values alignment and quality of life metrics
-- Consider practical constraints (commute, cost, social life)
-- Provide concrete decision criteria based on life priorities
-- Avoid generic "it depends on your situation" - give specific conditions`,
+INTELLIGENCE RULES:
 
-  BUSINESS: `CRITICAL for business questions:
-- Focus on market dynamics, competitive positioning, unit economics
-- Consider scalability, customer acquisition costs, defensibility
-- Be data-driven where possible (market size, growth rates)
-- Address founder/team capabilities and execution risk`
-} as const;
+1️⃣ DETECT WHAT MATTERS & CALCULATE IT
+   - Money in question? → Calculate breakeven, ROI, hourly rates, compound interest
+   - Time mentioned? → Calculate hourly/yearly value, opportunity cost
+   - Age/life stage? → Give age ranges ("under 30", "65+"), not vague "young/old"
+   - Risk involved? → Quantify probability, cite historical data, show downside
 
-const SYNTHESIS_TEMPLATES = {
-  FINANCIAL: (options: string[]) => `You are a financial analyst synthesizing a debate.
+2️⃣ NO VAGUE CONDITIONS (This is CRITICAL)
+   ❌ BAD: "Choose X if you value security"
+   ✅ GOOD: "Choose X if you're 65+ and may not reach 20-year breakeven"
 
-Options discussed: ${options.join(' vs ')}
+   ❌ BAD: "Choose Y if you prioritize growth"
+   ✅ GOOD: "Choose Y if you're under 30 with 6+ months savings and work in law/finance"
 
-Create a QUANTITATIVE synthesis with this EXACT format:
+   ❌ BAD: "Choose X if it fits your situation"
+   ✅ GOOD: "Choose X if you have kids under 10 who need your time now"
 
-**Key Tradeoff:** [One sentence on the core financial decision]
+3️⃣ INCLUDE MATH WHEN RELEVANT
+   - Comparing $ amounts? → Show calculations, breakeven analysis
+   - Comparing time? → Calculate hourly rates or yearly totals
+   - Comparing risk? → Show probability or cite historical outcomes
+
+4️⃣ BE RUTHLESSLY SPECIFIC
+   - Use numbers: "under 30", "6+ months savings", "3x more jobs"
+   - Use concrete conditions: "have dependents", "work in law", "own a home"
+   - Use measurable criteria: "can invest at 7%", "live 20+ more years"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FORMAT (STRICT - USE THIS STRUCTURE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+**Key Tradeoff:** [One decisive sentence]
 
 **Choose ${options[0]} if:**
-- [Financial/risk condition with numbers]
-- [Life stage or obligation (e.g., "You're 65+ and may not reach 20yr breakeven")]
-- [Spending discipline consideration]
+- [Concrete measurable condition with numbers/ages/situations]
+- [Concrete measurable condition with numbers/ages/situations]
+- [Concrete measurable condition with numbers/ages/situations]
 
 **Choose ${options[1]} if:**
-- [Financial/risk condition with numbers]
-- [Life stage or obligation]
-- [Investment capability assessment]
+- [Concrete measurable condition with numbers/ages/situations]
+- [Concrete measurable condition with numbers/ages/situations]
+- [Concrete measurable condition with numbers/ages/situations]
 
+${containsMoney ? `
 **Critical Numbers:**
-- [Calculate key metrics: breakeven years, annual returns, total over time]
-- [Show comparison: Option A yields X over Y years vs Option B]
-- [ROI analysis if relevant]
+[MUST CALCULATE: breakeven years, ROI comparison, annual amounts, hourly rates, compound growth, or whatever numbers are relevant to this decision. NEVER write "N/A" here.]
 
-**The Math Says:** [One decisive sentence based on calculations]
-
-**Assumptions to Challenge:**
-- [Question about ability to achieve stated returns]
-- [Question about risk tolerance or discipline]
-- [Question about time horizon or life expectancy]
-
-RULES:
-- Under 200 words
-- MUST include actual numbers in "Critical Numbers" section
-- NEVER write "Critical Numbers: N/A" for financial questions
-- Be specific, not vague: "If you're under 40" not "if you're young"`,
-
-  CAREER: (options: string[]) => `You are a career advisor synthesizing a debate.
-
-Options discussed: ${options.join(' vs ')}
-
-Create a LIFE-STAGE-BASED synthesis with this EXACT format:
-
-**Key Tradeoff:** [Security vs Growth, Income vs Learning, etc]
-
-**Choose ${options[0]} if:**
-- [Age/life stage condition: "You're 40+ with dependents"]
-- [Financial situation: "You have <3 months savings"]
-- [Risk tolerance: specific condition]
-
-**Choose ${options[1]} if:**
-- [Age/life stage condition]
-- [Financial situation]
-- [Risk tolerance: specific condition]
-
-**Critical Questions:**
-- Do you have 6+ months emergency fund?
-- Do you have dependents relying on your income?
-- What's your 5-year career trajectory with each option?
-- Can you afford 6 months unemployment if it fails?
-
-**Red Flags:**
-- [Warning signs for Option A]
-- [Warning signs for Option B]
-
-RULES:
-- Under 200 words
-- Give concrete conditions, not vague preferences
-- Focus on decision criteria based on personal circumstances`,
-
-  RELATIONSHIP: (options: string[]) => `You are providing relationship perspective (NOT therapy).
-
-Options discussed: ${options.join(' vs ')}
-
-Create an EMPATHETIC synthesis with this EXACT format:
-
-**Key Question:** [What is really at stake in this relationship decision?]
-
-**Signs This Might Be Worth Working On:**
-- [Positive pattern or fixable issue]
-- [Shared values or compatible life goals]
-
-**Signs of Fundamental Incompatibility:**
-- [Deal-breaker: different views on children, values, life goals]
-- [Unhealthy pattern: abuse, addiction, severe dysfunction]
-
-**Questions for Self-Reflection:**
-- [Deep question about your needs and boundaries]
-- [Question about patterns vs isolated incidents]
-- [Question about long-term compatibility]
-
-**Important Note:**
-"These are complex personal matters. Consider speaking with a licensed therapist or relationship counselor who can understand your specific situation and provide personalized guidance."
-
-RULES:
-- Under 200 words
-- Be non-judgmental and empathetic
-- Do NOT tell them what to do - provide reflection framework
-- Suggest professional help if red flags present`,
-
-  DEFAULT: (options: string[]) => `You are synthesizing a debate.
-
-Options discussed: ${options.join(' vs ')}
-
-Create a NEUTRAL synthesis with this EXACT format:
-
-**Key Tradeoff:** [One sentence]
-
-**Choose ${options[0]} if:**
-- [Specific condition 1]
-- [Specific condition 2]
-
-**Choose ${options[1]} if:**
-- [Specific condition 1]
-- [Specific condition 2]
+**The Math Says:** [One decisive sentence based on your calculations]
+` : ''}
 
 **Assumptions to Challenge:**
-- [Question about unstated assumption 1]
-- [Question about unstated assumption 2]
+- [What did the question assume but not state?]
+- [What critical information is missing for this decision?]
 
-RULES:
-- Under 150 words
-- Be specific with conditions, not vague
-- Do NOT pick a side - provide decision criteria`
-} as const;
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLES OF GOOD SYNTHESIS (LEARN FROM THESE)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Example 1 - Financial Question:
+✅ "Choose $1000/week if you're 65+ and may not live to 20-year breakeven point ($1.04M total)"
+✅ "Choose $1M lump sum if you're under 50 and can invest at 7% returns ($70k/year beats $52k/year)"
+✅ "Critical Numbers: Breakeven is 19.2 years. $1M at 7% = $1.97M after 20 years vs $1.04M from weekly."
+❌ "Choose $1000/week if you prefer stability" [TOO VAGUE]
+
+Example 2 - Career Question:
+✅ "Choose 60hr job if you're under 30 with no dependents and work in law/banking where grinding compounds"
+✅ "Choose 30hr job if you're 40+ with kids and work in creative fields where rest improves output"
+❌ "Choose 60hr job if you want career growth" [TOO VAGUE]
+
+Example 3 - Tech Question:
+✅ "Choose React if job hunting in next 6 months (3x more LinkedIn postings than Vue, $15k higher avg salary)"
+✅ "Choose Vue if working at small startup that values developer happiness over hiring pool"
+❌ "Choose React if you want more opportunities" [TOO VAGUE]
+
+Example 4 - Business Question:
+✅ "Choose B2B if selling to enterprises with $50k+ contracts and 6-12 month sales cycles"
+✅ "Choose B2C if you need cash flow in 3 months and can acquire customers for under $50"
+❌ "Choose B2B if you want stable revenue" [TOO VAGUE]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FINAL RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+- Under 200 words total
+- Be RUTHLESSLY specific with every condition
+- DO NOT pick a side - provide decision criteria only
+- DO NOT say "it depends" without stating exactly what it depends on
+- DO NOT use vague words like "young", "stable", "growth" without quantifying them
+- If money is involved, MUST calculate and show the math
+
+Your synthesis should be so specific that someone can read it and immediately know which option fits their situation.`;
+}
 
 // ============================================================================
 // AGENT RHETORICAL STYLES
@@ -215,23 +157,37 @@ const PHASE_PROMPTS = {
 This is your opening statement - make it count.
 Be specific and opinionated.`,
 
-  CONFRONTATION: (previousAgentName: string, previousContent: string) => `
+  CONFRONTATION: (previousAgentName: string, previousContent: string) => {
+    const claims = previousContent.split('**').filter(s => s.trim().length > 10).slice(0, 3);
+
+    return `
 The opposing agent (${previousAgentName}) just argued:
-"${previousContent.substring(0, 300)}..."
+"${previousContent.substring(0, 400)}..."
 
-Your job: ATTACK their specific arguments. Do NOT just list more pros of your position.
+YOUR MISSION: Surgically dismantle their WEAKEST argument.
 
-REQUIRED FORMAT:
-1. Quote or reference a specific claim they made
-2. Explain why it's wrong, exaggerated, or incomplete
-3. Provide counter-evidence or examples
+REQUIRED ATTACK PATTERN:
+1. Identify their weakest claim: "${claims[0]?.substring(0, 50) || 'their main argument'}..."
+2. Explain the hidden assumption they're making
+3. Provide counter-evidence or real-world example that contradicts it
+4. Pivot back to why your position is superior
 
-Example: "${previousAgentName} claims X gives advantage Y, but this ignores Z. In reality, [counter-example]."
+EXAMPLES OF GOOD REBUTTALS:
+✅ "${previousAgentName} claims higher pay justifies 60-hour weeks, but this ignores the burnout cliff. Studies show productivity drops 25% after 50 hours/week. You're not earning more—you're earning LESS per hour of output."
 
-DO NOT:
-- Ignore what they said
-- Just list generic benefits again
-- Repeat your Round 1 arguments`,
+✅ "${previousAgentName} says work-life balance is crucial, but fails to address that financial stress from lower pay also destroys balance. Can't enjoy 'balance' when you're anxious about bills."
+
+EXAMPLES OF BAD REBUTTALS:
+❌ "While ${previousAgentName} makes good points, I believe..." [Too agreeable]
+❌ "Here are more benefits of my position..." [Ignoring their argument]
+❌ "Both options have merit..." [Position betrayal]
+
+STRICT RULES:
+- Start by naming what they got wrong
+- Use specific examples or data
+- Under 120 words
+- NEVER concede ground without immediately taking it back`;
+  },
 
   SYNTHESIS: `This is the final wrap-up. Provide clear, actionable decision criteria.
 DO NOT introduce new arguments or pick a side.
@@ -241,19 +197,6 @@ Your job is to help the user decide for themselves based on their specific situa
 // ============================================================================
 // HELPER FUNCTIONS
 // ============================================================================
-
-function getTypeGuidance(type?: string): string {
-  if (!type || !(type in TYPE_SPECIFIC_GUIDANCE)) return '';
-  return TYPE_SPECIFIC_GUIDANCE[type as keyof typeof TYPE_SPECIFIC_GUIDANCE];
-}
-
-function getSynthesisTemplate(type?: string, options?: string[]): string {
-  const opts = options || ['Option A', 'Option B'];
-  if (!type || !(type in SYNTHESIS_TEMPLATES)) {
-    return SYNTHESIS_TEMPLATES.DEFAULT(opts);
-  }
-  return SYNTHESIS_TEMPLATES[type as keyof typeof SYNTHESIS_TEMPLATES](opts);
-}
 
 function getAgentStyle(agentId?: string): string {
   if (!agentId || !(agentId in AGENT_STYLES)) return '';
@@ -267,7 +210,6 @@ function getPhaseInstruction(phase?: string, previousAgentName?: string, previou
     if (previousAgentName && previousContent) {
       return PHASE_PROMPTS.CONFRONTATION(previousAgentName, previousContent);
     }
-    // Fallback if no previous content available
     return 'Attack the previous agent\'s arguments. Be specific and confrontational.';
   }
 
@@ -282,7 +224,6 @@ function getPhaseInstruction(phase?: string, previousAgentName?: string, previou
   return '';
 }
 
-// Calculate cost for a specific model
 function calculateCost(model: string, promptTokens: number, completionTokens: number): number {
   const pricing: Record<string, { input: number; output: number }> = {
     'gpt-4o': { input: 2.50, output: 10.00 },
@@ -337,7 +278,7 @@ Return JSON:
     return JSON.parse(check.choices[0].message.content || '{"isValid": true}');
   } catch (e) {
     console.error('Validation failed:', e);
-    return { isValid: true }; // Fail open to avoid blocking
+    return { isValid: true };
   }
 }
 
@@ -383,7 +324,7 @@ Return JSON:
     return JSON.parse(check.choices[0].message.content || '{"isValid": true}');
   } catch (e) {
     console.error('Synthesis validation failed:', e);
-    return { isValid: true }; // Fail open
+    return { isValid: true };
   }
 }
 
@@ -393,9 +334,6 @@ Return JSON:
 
 export async function POST(req: Request) {
   try {
-    // ========================================================================
-    // 1. AUTHENTICATION & INPUT VALIDATION
-    // ========================================================================
     const session = await getServerSession(authOptions);
     if (!session?.user?.id) {
       return new Response("Unauthorized", { status: 401 });
@@ -404,7 +342,6 @@ export async function POST(req: Request) {
     await ensureConnection();
 
     const body = await req.json();
-    let analysis = body.analysis;
     const {
       messages,
       agent,
@@ -415,13 +352,10 @@ export async function POST(req: Request) {
       options = [],
       round,
       phase,
-      previousAgentStance,
-      previousAgentName,
+      previousAgentName
     } = body;
 
-    // ========================================================================
-    // 2. BUDGET CHECK
-    // ========================================================================
+    // Budget check
     const currentSpendStr = await redis.get(keys.systemSpend);
     const currentSpend = parseFloat(currentSpendStr || "0");
 
@@ -435,9 +369,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ========================================================================
-    // 3. API KEY CHECK
-    // ========================================================================
+    // API key check
     const apiKey = await getApiKeyForUser(session.user.id, session.user.email || undefined);
     if (!apiKey) {
       return new Response(JSON.stringify({
@@ -451,37 +383,28 @@ export async function POST(req: Request) {
 
     const openai = new OpenAI({ apiKey });
 
-    // ========================================================================
-    // 4. RATE LIMITING (Free Tier Only)
-    // ========================================================================
+    // Rate limiting (Free Tier Only)
     const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
-    if (isUsingSystemKey) {
+    if (isUsingSystemKey && countAsUserMessage) {
       const dailyKey = keys.userDailyMessages(session.user.id);
-      const currentCountStr = await redis.get(dailyKey);
-      const currentCount = parseInt(currentCountStr || "0", 10);
+      const currentCount = parseInt((await redis.get(dailyKey)) || "0", 10);
 
-      if (countAsUserMessage) {
-        if (currentCount >= DAILY_MESSAGE_LIMIT) {
-          return new Response(JSON.stringify({
-            error: "Daily Limit Reached",
-            message: `You've used all ${DAILY_MESSAGE_LIMIT} free messages today. Add your own API key for unlimited access.`,
-            remainingMessages: 0
-          }), {
-            status: 429,
-            headers: { "Content-Type": "application/json" }
-          });
-        }
-
-        const newCount = await redis.incr(dailyKey);
-        if (newCount === 1) await redis.expire(dailyKey, 86400);
+      if (currentCount >= DAILY_MESSAGE_LIMIT) {
+        return new Response(JSON.stringify({
+          error: "Daily Limit Reached",
+          message: `You've used all ${DAILY_MESSAGE_LIMIT} free messages today. Add your own API key for unlimited access.`,
+          remainingMessages: 0
+        }), {
+          status: 429,
+          headers: { "Content-Type": "application/json" }
+        });
       }
+
+      const newCount = await redis.incr(dailyKey);
+      if (newCount === 1) await redis.expire(dailyKey, 86400);
     }
 
-    // ========================================================================
-    // 5. SPECIAL VALIDATION ENDPOINTS
-    // ========================================================================
-
-    // Validate position defense
+    // Validation endpoints
     if (debateTurn === 'validate') {
       const contentToValidate = messages[messages.length - 1].content;
       const opposingPosition = options.find((o: string) => o !== targetPosition);
@@ -498,7 +421,6 @@ export async function POST(req: Request) {
       });
     }
 
-    // Validate synthesis neutrality
     if (debateTurn === 'validate-synthesis') {
       const contentToValidate = messages[messages.length - 1].content;
 
@@ -513,9 +435,7 @@ export async function POST(req: Request) {
       });
     }
 
-    // ========================================================================
-    // 6. TRACK EVENT
-    // ========================================================================
+    // Track event
     posthog.capture({
       distinctId: session.user.id,
       event: 'message_sent',
@@ -531,37 +451,11 @@ export async function POST(req: Request) {
       }
     });
 
-    // ========================================================================
-    // 7. BUILD SYSTEM PROMPT
-    // ========================================================================
+    // Build system prompt
     const isSummary = debateTurn === 'summary';
 
-    // 🔍 DEBUG LOGGING FOR SYNTHESIS
-    if (isSummary) {
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🔍 SYNTHESIS DEBUG - RECEIVED DATA');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('Analysis Type:', analysis?.type || 'MISSING');
-      console.log('Options:', JSON.stringify(options));
-      console.log('Has Analysis:', !!analysis);
-      console.log('Question (first 100 chars):', messages[0]?.content?.substring(0, 100));
+    const userQuestion = messages.find((m: any) => m.role === 'user')?.content || '';
 
-      // Detect if this should be financial
-      const containsMoney = options?.some((o: string) => /\$|dollar|money|income/i.test(o));
-      console.log('Contains $ in options:', containsMoney);
-
-      if (containsMoney && analysis?.type !== 'FINANCIAL') {
-        console.warn('⚠️ WARNING: Question has $ but type is not FINANCIAL!');
-        console.warn('⚠️ Forcing type to FINANCIAL');
-        analysis = { ...analysis, type: 'FINANCIAL' };
-      }
-
-      console.log('Final Type for Template:', analysis?.type);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    }
-
-
-    const typeGuidance = getTypeGuidance(analysis?.type);
     const agentStyle = getAgentStyle(agent.id);
     const phaseInstruction = getPhaseInstruction(
       phase,
@@ -609,7 +503,7 @@ Repetition = failure.` : '';
     const verbosityLimit = `
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📏 LENGTH LIMIT: ${isSummary ? '150 WORDS' : '100 WORDS'} MAX
+📏 LENGTH LIMIT: ${isSummary ? '200 WORDS' : '100 WORDS'} MAX
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Rules:
@@ -622,23 +516,8 @@ Good: "**Trust matters.** Customers respect honesty. Hidden pricing feels like a
 Bad: "Pricing transparency is fundamentally important because it builds trust with customers by demonstrating honesty..."`;
 
     // Build final system prompt
-
-// 🔍 DEBUG LOGGING FOR TEMPLATE
-    if (isSummary) {
-      const template = getSynthesisTemplate(analysis?.type, options);
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('🔍 TEMPLATE DEBUG');
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
-      console.log('Template Type Used:', analysis?.type || 'DEFAULT');
-      console.log('Template Preview (first 300 chars):');
-      console.log(template.substring(0, 300) + '...');
-      console.log('Template contains "Critical Numbers":', template.includes('Critical Numbers'));
-      console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
-    }
-
-
     const systemPrompt = isSummary
-      ? getSynthesisTemplate(analysis?.type, options)
+      ? getUniversalSynthesisPrompt(userQuestion, options)
       : `${agent.persona || "You are a debate participant."}
 
 ${agentStyle}
@@ -654,17 +533,12 @@ ${phaseInstruction}
 
 ${positionEnforcement}
 
-${typeGuidance}
-
 ${argumentMemory}
 
 ${verbosityLimit}`;
 
-    // ========================================================================
-    // 8. BUILD MESSAGE HISTORY WITH POSITION ANNOTATIONS
-    // ========================================================================
+    // Build message history with position annotations
     const annotatedHistory = conversationHistory.map((msg: any) => {
-      // Annotate each message with stance to reinforce position memory
       const stanceLabel = msg.stance ? ` [Defending: ${msg.stance}]` : '';
       const agentLabel = msg.agentName ? `${msg.agentName}${stanceLabel}: ` : '';
 
@@ -688,9 +562,7 @@ ${verbosityLimit}`;
       });
     }
 
-    // ========================================================================
-    // 9. STREAM RESPONSE
-    // ========================================================================
+    // Stream response
     const selectedModel = agent.model || "gpt-4o-mini";
     const response = await openai.chat.completions.create({
       model: selectedModel,
