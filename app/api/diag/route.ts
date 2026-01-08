@@ -48,26 +48,19 @@ export async function GET() {
     // --- NEW: USER DATA INSPECTION ---
     if (session?.user?.id) {
       const userId = session.user.id;
-      const spacesKey = keys.spaces(userId);
       const agentsKey = keys.agents(userId);
 
-      const [rawSpaces, rawAgents] = await Promise.all([
-        redis.get(spacesKey),
-        redis.get(agentsKey)
-      ]);
+      const rawAgents = await redis.get(agentsKey);
 
       diagnostics.userData = {
-        spacesKey,
         agentsKey,
-        spacesRaw: rawSpaces ? (rawSpaces.substring(0, 100) + "...") : "MISSING",
         agentsRaw: rawAgents ? (rawAgents.substring(0, 100) + "...") : "MISSING",
-        spacesParsed: rawSpaces ? JSON.parse(rawSpaces).length : 0,
         agentsParsed: rawAgents ? JSON.parse(rawAgents).length : 0,
       };
 
       diagnostics.migrationSummary = {
-        status: (diagnostics.userData.spacesParsed > 0) ? "SYNCED" : "PENDING_OR_EMPTY",
-        advice: (diagnostics.userData.spacesParsed === 0)
+        status: (diagnostics.userData.agentsParsed > 0) ? "SYNCED" : "PENDING_OR_EMPTY",
+        advice: (diagnostics.userData.agentsParsed === 0)
           ? "Data exists only in LocalStorage. Check Browser Console [AppProvider] logs."
           : "Data is successfully in Redis."
       };

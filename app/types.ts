@@ -26,6 +26,10 @@ export type Message = {
     total: number;
   };
   isSummary?: boolean;
+  respondingToId?: string; // ID of the message this is responding to (in debate mode)
+  stance?: string; // Detected stance or label (e.g., 'pro', 'con', or a specific option name)
+  round?: number;
+  phase?: string;
 };
 
 export type ConversationTemplate = {
@@ -34,7 +38,6 @@ export type ConversationTemplate = {
   description: string;
   category: 'decision-making' | 'creative' | 'technical' | 'research';
   selectedAgents: string[]; // IDs of default agents
-  autoModeEnabled: boolean;
   startingPrompt?: string; // Optional guided question
   icon: string;
 };
@@ -43,7 +46,7 @@ export type Conversation = {
   id: string;
   title: string;
   messages: Message[];
-  participantIds?: string[];
+  participantIds: string[]; // Agent IDs in this conversation
   updatedAt?: number;
 };
 
@@ -52,21 +55,18 @@ export type SharedConversation = Conversation & {
   sharedAt: number;
 };
 
-export type Space = {
-  id: string;
-  name: string;
-  agentIds: string[];
-  conversations: Conversation[];
-};
+// REMOVED: Space type - conversations now live directly under user
 
 export type AppState = {
   agents: Agent[];
-  spaces: Space[];
-  activeSpaceId: string | null;
+  conversations: Conversation[];
+  activeConversationId: string | null;
   activeAgentId: string | null;
   ui: {
     isAgentModalOpen: boolean;
-    isSpaceModalOpen: boolean;
-    bannerMessage: { message: string | null };
+    isConversationModalOpen: boolean;
+    isSidebarOpen: boolean;
+    bannerMessage: { message: string | null; type?: "success" | "error" };
   };
+  _hydrated: boolean;
 };

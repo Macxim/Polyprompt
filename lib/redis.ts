@@ -35,7 +35,7 @@ export const ensureConnection = async () => {
 // Key helpers
 export const keys = {
   agents: (userId: string) => `user:${userId}:agents`,
-  spaces: (userId: string) => `user:${userId}:spaces`,
+  conversations: (userId: string) => `user:${userId}:conversations`,
   settings: (userId: string) => `user:${userId}:settings`,
   systemSpend: 'system:openai:spend',
   userDailyMessages: (userId: string) => {
