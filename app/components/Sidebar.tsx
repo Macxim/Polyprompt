@@ -18,19 +18,11 @@ export default function Sidebar() {
   };
 
   const recentChats = useMemo(() => {
-    const all = state.spaces.flatMap((s) =>
-      s.conversations.map((c) => ({
-        ...c,
-        spaceId: s.id,
-        spaceName: s.name,
-      }))
-    );
-
-    // Sort by updatedAt (newest first). If missing, we can use 0.
-    return all
+    // Flat conversations - no more nested spaces
+    return [...state.conversations]
       .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
       .slice(0, 5);
-  }, [state.spaces]);
+  }, [state.conversations]);
 
   return (
     <>
@@ -72,7 +64,7 @@ export default function Sidebar() {
             <NavItem
               href="/"
               icon={<Home className="w-5 h-5" />}
-              label="Spaces"
+              label="Home"
               isActive={pathname === "/"}
               onClick={closeSidebar}
             />
@@ -107,7 +99,6 @@ export default function Sidebar() {
                        <div className="w-4 h-4 rounded bg-slate-100"></div>
                        <div className="h-3 bg-slate-100 rounded w-24"></div>
                      </div>
-                     <div className="h-2 bg-slate-50 rounded w-16 ml-6"></div>
                    </div>
                  ))
                ) : recentChats.length === 0 ? (
@@ -116,26 +107,26 @@ export default function Sidebar() {
                  recentChats.map((chat) => (
                    <Link
                      key={chat.id}
-                     href={`/space/${chat.spaceId}/conversation/${chat.id}`}
+                     href={`/conversation/${chat.id}`}
                      onClick={closeSidebar}
                      className={`flex flex-col px-3 py-2 rounded-lg transition-all group ${
-                       pathname === `/space/${chat.spaceId}/conversation/${chat.id}`
+                       pathname === `/conversation/${chat.id}`
                          ? "bg-indigo-50/80 border border-indigo-100 shadow-sm"
                          : "hover:bg-slate-50 border border-transparent"
                      }`}
                    >
                      <div className="flex items-center gap-2">
                        <MessageSquare className={`w-3.5 h-3.5 ${
-                         pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-600" : "text-slate-400"
+                         pathname === `/conversation/${chat.id}` ? "text-indigo-600" : "text-slate-400"
                        }`} />
                        <span className={`text-xs font-bold truncate flex-1 ${
-                         pathname === `/space/${chat.spaceId}/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
+                         pathname === `/conversation/${chat.id}` ? "text-indigo-700" : "text-slate-700"
                        }`}>
                          {chat.title}
                        </span>
                      </div>
                      <span className="text-[10px] text-slate-400 ml-6 truncate">
-                       {chat.spaceName}
+                       {chat.participantIds?.length || 0} agents
                      </span>
                    </Link>
                  ))
@@ -190,5 +181,3 @@ function NavItem({
     </Link>
   );
 }
-
-// NavItem and icons removed in favor of lucide-react

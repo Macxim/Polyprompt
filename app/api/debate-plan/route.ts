@@ -7,149 +7,31 @@ import { getApiKeyForUser } from "@/lib/get-api-key";
 export const runtime = "nodejs";
 
 // ============================================================================
-// QUESTION ANALYSIS
+// SIMPLIFIED QUESTION ANALYSIS
 // ============================================================================
 
 interface QuestionAnalysis {
-  type:
-    | "FINANCIAL"
-    | "CAREER"
-    | "RELATIONSHIP"
-    | "TECHNOLOGY"
-    | "BUSINESS"
-    | "LIFESTYLE"
-    | "GENERAL";
   options: string[];
-  characteristics: {
-    hasNumbers: boolean;
-    isUrgent: boolean;
-    isLongTerm: boolean;
-    hasEmotionalWords: boolean;
-    mentionsFamily: boolean;
-  };
 }
 
+/**
+ * Extract options from a "X or Y" style question.
+ * Type detection has been removed - the universal prompt handles all types.
+ */
 function analyzeQuestion(prompt: string): QuestionAnalysis {
-  const lowerPrompt = prompt.toLowerCase();
-
-  const typeKeywords: Record<string, string[]> = {
-    FINANCIAL: [
-      "$",
-      "money",
-      "salary",
-      "investment",
-      "cost",
-      "price",
-      "income",
-      "equity",
-      "stock",
-      "bitcoin",
-      "crypto",
-      "loan",
-      "debt",
-    ],
-    CAREER: [
-      "job",
-      "career",
-      "work",
-      "boss",
-      "company",
-      "startup",
-      "promotion",
-      "quit",
-      "fired",
-      "hire",
-      "interview",
-    ],
-    RELATIONSHIP: [
-      "relationship",
-      "dating",
-      "marry",
-      "breakup",
-      "divorce",
-      "partner",
-      "girlfriend",
-      "boyfriend",
-      "spouse",
-    ],
-    TECHNOLOGY: [
-      "software",
-      "framework",
-      "programming",
-      "tech stack",
-      "tool",
-      "app",
-      "platform",
-      "react",
-      "vue",
-      "python",
-      "javascript",
-    ],
-    BUSINESS: [
-      "business",
-      "startup",
-      "founder",
-      "b2b",
-      "b2c",
-      "product",
-      "launch",
-      "pivot",
-      "market",
-      "customer",
-    ],
-    LIFESTYLE: [
-      "move",
-      "city",
-      "house",
-      "apartment",
-      "location",
-      "neighborhood",
-      "commute",
-      "live",
-    ],
-  };
-
-  let detectedType: QuestionAnalysis["type"] = "GENERAL";
-  let maxMatches = 0;
-
-  for (const [type, keywords] of Object.entries(typeKeywords)) {
-    const matches = keywords.filter((kw) =>
-      lowerPrompt.includes(kw)
-    ).length;
-    if (matches > maxMatches) {
-      maxMatches = matches;
-      detectedType = type as QuestionAnalysis["type"];
-    }
-  }
-
-  // Extract options (X or Y)
   const orPattern = /(.+?)\s+(?:or|vs\.?)\s+(.+?)(?:\?|$)/i;
   const match = prompt.match(orPattern);
 
   const options = match
     ? [
         match[1]
-          .replace(/^(should i|do i|is it better to|can i)/i, "")
+          .replace(/^(should i|do i|is it better to|can i|what if i)/i, "")
           .trim(),
         match[2].trim(),
       ]
     : [];
 
-  return {
-    type: detectedType,
-    options,
-    characteristics: {
-      hasNumbers: /\d/.test(prompt),
-      isUrgent: /\b(now|immediately|today|urgent|asap)\b/i.test(prompt),
-      isLongTerm: /\b(future|years|decades|forever|lifetime|long-term)\b/i.test(
-        prompt
-      ),
-      hasEmotionalWords:
-        /\b(love|hate|scared|excited|worried|anxious)\b/i.test(prompt),
-      mentionsFamily:
-        /\b(family|kids|children|spouse|wife|husband|parent)\b/i.test(prompt),
-    },
-  };
+  return { options };
 }
 
 // ============================================================================
@@ -216,11 +98,6 @@ const directorPrompt = `You are the "Lean Debate Director" - an expert at orches
 
 "${prompt}"
 
-Question Type: ${analysis.type}
-${analysis.characteristics.hasNumbers ? "💰 Contains numbers - this is quantifiable" : ""}
-${analysis.characteristics.isUrgent ? "🚨 Time-sensitive decision" : ""}
-${analysis.characteristics.isLongTerm ? "⏰ Long-term implications" : ""}
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👥 AVAILABLE AGENTS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -263,8 +140,8 @@ CRITICAL DIRECTOR RULES:
    - Synthesis: 150 words MAX
    - Use phrase: "Keep response under 100 words. Be punchy and direct."
 
-4️⃣ TYPE-SPECIFIC INSTRUCTIONS
-   ${getTypeSpecificDirectorGuidance(analysis.type)}
+4️⃣ UNIVERSAL INTELLIGENCE INSTRUCTIONS
+   ${getUniversalDirectorGuidance()}
 
 5️⃣ ROUND 2 MUST REFERENCE ROUND 1
    - In Round 2, agents must ATTACK specific claims from Round 1
@@ -414,7 +291,6 @@ CRITICAL VALIDATION CHECKLIST:
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
       console.log("Options:", data.options);
       console.log("Agent Positions:", Array.from(agentPositions.entries()));
-      console.log("Question Type:", analysis.type);
       console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
     } catch (err) {
       console.error("❌ PLAN VALIDATION FAILED");
@@ -433,13 +309,7 @@ CRITICAL VALIDATION CHECKLIST:
     // RETURN
     // ------------------------------------------------------------------------
 
-    return NextResponse.json({
-      ...data,
-      analysis: {
-        type: analysis.type,
-        characteristics: analysis.characteristics,
-      },
-    });
+    return NextResponse.json(data);
   } catch (error: any) {
     console.error("Debate plan API error:", error);
     return NextResponse.json(
@@ -450,47 +320,89 @@ CRITICAL VALIDATION CHECKLIST:
 }
 
 // ============================================================================
-// TYPE-SPECIFIC DIRECTOR GUIDANCE (UNCHANGED)
+// UNIVERSAL DIRECTOR GUIDANCE
 // ============================================================================
+function getUniversalDirectorGuidance(): string {
+  return `
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+INTELLIGENT DEBATE DIRECTION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-function getTypeSpecificDirectorGuidance(type: string): string {
-  const guidance: Record<string, string> = {
-    FINANCIAL: `For FINANCIAL questions:
-- Options should include specific dollar amounts if mentioned
-- Synthesis MUST include calculations (breakeven, ROI, annual returns)
-- Instruct agents to use concrete numbers, not vague "grows over time"
-- Example instruction: "Calculate: $1M at 7% = $70k/year vs $52k/year weekly"`,
+Your job: Create a lean, high-impact debate plan where agents make SPECIFIC, MEASURABLE arguments.
 
-    CAREER: `For CAREER questions:
-- Synthesis must consider life stage (age, dependents)
-- Include risk assessment based on savings/obligations
-- Focus on 5-year trajectory, not just immediate benefits
-- Example: "If under 30 with 6mo savings" not "if you value growth"`,
+DETECT WHAT MATTERS & INSTRUCT ACCORDINGLY:
 
-    RELATIONSHIP: `For RELATIONSHIP questions:
-- Tone must be empathetic and non-judgmental
-- Distinguish fixable issues from deal-breakers
-- Synthesis should include self-reflection prompts
-- MUST include disclaimer about seeking professional help`,
+💰 IF MONEY INVOLVED ($, salary, cost, income):
+   → Instruct agents: "Calculate breakeven point", "Show ROI over X years", "Compare annual returns"
+   → Synthesis MUST include: actual numbers, breakeven analysis, what the math says
+   → Example: "$1M at 7% = $70k/year vs $52k/year. Breakeven: 19 years."
 
-    TECHNOLOGY: `For TECH questions:
-- Include job market data (demand, salaries)
-- Mention ecosystem maturity and learning curve
-- Be specific: "React has 3x more jobs" not "React is popular"`,
+⏰ IF TIME INVOLVED (hours/week, work-life balance):
+   → Instruct agents: "Calculate effective hourly rate", "Show opportunity cost over 5 years"
+   → Synthesis MUST include: time-value calculations, productivity comparisons
+   → Example: "$80k for 60hrs/week = $26/hr vs $50k for 30hrs/week = $32/hr"
 
-    BUSINESS: `For BUSINESS questions:
-- Focus on market dynamics, unit economics, scalability
-- Consider competitive positioning and defensibility
-- Address execution risk and founder capabilities`,
+👤 IF AGE/LIFE STAGE INVOLVED (career, retirement, family):
+   → Instruct agents: Use specific age ranges and conditions
+   → Synthesis MUST include: "If you're under 30...", "If you have dependents..."
+   → Example: "Choose X if you're 40+ with kids. Choose Y if you're under 30 with 6mo savings."
 
-    LIFESTYLE: `For LIFESTYLE questions:
-- Focus on values alignment and quality of life
-- Consider practical constraints (cost, commute, social)
-- Provide concrete decision criteria based on priorities`
-  };
+📊 IF RISK INVOLVED (startup, investment, career change):
+   → Instruct agents: "Cite failure rates", "Show historical outcomes", "Quantify downside"
+   → Synthesis MUST include: probability, worst-case scenarios, risk mitigation
+   → Example: "70% of startups fail. If you have no safety net, risk is too high."
 
-  return guidance[type] || `For GENERAL questions:
-- Keep debate focused on core tradeoffs
-- Provide specific decision criteria in synthesis
-- Avoid vague "it depends" conclusions`;
+🎯 IF COMPARING OPTIONS (X vs Y):
+   → Instruct agents: "Provide concrete examples or data points for your side"
+   → Synthesis MUST include: "Choose X if [measurable condition]. Choose Y if [measurable condition]."
+   → Example: "Choose React if job hunting (3x more postings). Choose Vue if small team values simplicity."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CRITICAL INSTRUCTION QUALITY RULES
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Each agent instruction MUST be SPECIFIC and ACTIONABLE:
+
+❌ BAD INSTRUCTIONS (TOO VAGUE):
+   "Argue for stability and long-term thinking"
+   "Discuss the benefits of your option"
+   "Consider the tradeoffs"
+
+✅ GOOD INSTRUCTIONS (SPECIFIC & MEASURABLE):
+   "Argue $1000/week provides guaranteed $52k/year vs risky investment returns. Calculate total over 20 years."
+   "Attack their claim that $1M grows wealth. 70% of lottery winners go broke. Cite this to show risk of mismanagement."
+   "Calculate effective hourly rate: $80k/60hrs = $26/hr. Show this actually pays LESS per hour than lower salary job."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SYNTHESIS INSTRUCTIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The synthesis instruction MUST enforce specificity:
+
+Template: "Provide neutral synthesis with CONCRETE decision criteria:
+- Use age ranges: 'under 30', '65+', '40+ with kids'
+- Use numbers: '6+ months savings', '3x more jobs', '$70k/year'
+- Use measurable conditions: 'have dependents', 'work in law/finance', 'can invest at 7%'
+- IF MONEY INVOLVED: MUST calculate and include: breakeven, ROI, annual amounts, compound growth
+- Format: 'Choose [Option A] if: [concrete condition 1], [concrete condition 2]'
+- Under 200 words"
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+EXAMPLES OF GOOD DEBATE PLANS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Question: "$1000/week for life vs $1M lump sum?"
+
+✅ GOOD Agent Instruction:
+"Argue $1000/week = $52k/year guaranteed. Calculate total over 20 years ($1.04M). Show this eliminates investment risk and provides peace of mind for those who can't invest wisely. Under 100 words."
+
+✅ GOOD Rebuttal Instruction:
+"Attack their 'peace of mind' argument. If you can invest $1M at 7%, you earn $70k/year FOREVER, beating $52k/year. Show the math: after 20 years you have $3.87M vs their $1.04M. Under 100 words."
+
+✅ GOOD Synthesis Instruction:
+"Calculate breakeven (19 years). Show: Choose weekly if 65+ (may not reach breakeven) or have spending problems. Choose lump sum if under 50 and can invest at 7% returns. MUST include 'Critical Numbers' section with calculations."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Remember: SPECIFICITY wins debates. Vague arguments lose debates.`;
 }

@@ -1,24 +1,26 @@
-import { Agent, AppState, Space, Message } from "../types";
+import { Agent, AppState, Conversation, Message } from "../types";
 
 // Every possible action the app can perform:
 export type Action =
+  // Agents
   | { type: "ADD_AGENT"; payload: Agent }
   | { type: "UPDATE_AGENT"; payload: Agent }
   | { type: "DELETE_AGENT"; payload: { id: string } }
-  | { type: "ADD_SPACE"; payload: Space }
-  | { type: "UPDATE_SPACE"; id: string; changes: Partial<Space> }
-  | { type: "DELETE_SPACE"; payload: { id: string } }
-  | { type: "SET_ACTIVE_SPACE"; payload: { id: string } }
-  | { type: "CLEAR_ACTIVE_AGENT" }
   | { type: "SET_ACTIVE_AGENT"; payload: { id: string | null } }
+  | { type: "CLEAR_ACTIVE_AGENT" }
+  // Conversations (flat, no spaceId)
+  | { type: "ADD_CONVERSATION"; payload: Conversation }
+  | { type: "UPDATE_CONVERSATION"; payload: { id: string; changes: Partial<Conversation> } }
+  | { type: "DELETE_CONVERSATION"; payload: { id: string } }
+  | { type: "SET_ACTIVE_CONVERSATION"; payload: { id: string | null } }
+  // Messages (flat, just conversationId)
   | {
       type: "ADD_MESSAGE";
-      payload: { spaceId: string; conversationId: string; message: Message };
+      payload: { conversationId: string; message: Message };
     }
   | {
       type: "UPDATE_MESSAGE";
       payload: {
-        spaceId: string;
         conversationId: string;
         messageId: string;
         content: string;
@@ -30,13 +32,11 @@ export type Action =
     }
   | {
       type: "RENAME_CONVERSATION";
-      payload: { spaceId: string; conversationId: string; newTitle: string };
+      payload: { conversationId: string; newTitle: string };
     }
-  | { type: "DELETE_CONVERSATION"; payload: { spaceId: string; conversationId: string } }
+  // UI
   | { type: "OPEN_AGENT_MODAL" }
   | { type: "CLOSE_AGENT_MODAL" }
-  | { type: "OPEN_SPACE_MODAL" }
-  | { type: "CLOSE_SPACE_MODAL" }
   | { type: "OPEN_CONVERSATION_MODAL" }
   | { type: "CLOSE_CONVERSATION_MODAL" }
   | { type: "TOGGLE_SIDEBAR" }

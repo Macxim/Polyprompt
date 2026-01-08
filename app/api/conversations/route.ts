@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { keys, getUserData, setUserData } from "@/lib/redis";
-import { Space } from "@/app/types";
+import { Conversation } from "@/app/types";
 
 export async function GET() {
   const session = await getServerSession(authOptions);
@@ -11,10 +11,10 @@ export async function GET() {
   }
 
   const userId = session.user.id;
-  const key = keys.spaces(userId);
-  const spaces = await getUserData<Space>(key);
+  const key = keys.conversations(userId);
+  const conversations = await getUserData<Conversation>(key);
 
-  return NextResponse.json(spaces);
+  return NextResponse.json(conversations);
 }
 
 export async function POST(req: NextRequest) {
@@ -24,26 +24,26 @@ export async function POST(req: NextRequest) {
   }
 
   const userId = session.user.id;
-  const key = keys.spaces(userId);
+  const key = keys.conversations(userId);
   const body = await req.json();
 
   if (Array.isArray(body)) {
-    // Bulk update (e.g., during migration)
+    // Bulk update (e.g., during migration or sync)
     await setUserData(key, body);
     return NextResponse.json(body);
   } else {
-    // Single space update
-    const spaces = await getUserData<Space>(key);
-    const updatedSpace = body as Space;
-    const index = spaces.findIndex((s) => s.id === updatedSpace.id);
+    // Single conversation update
+    const conversations = await getUserData<Conversation>(key);
+    const updatedConversation = body as Conversation;
+    const index = conversations.findIndex((c) => c.id === updatedConversation.id);
 
     if (index > -1) {
-      spaces[index] = updatedSpace;
+      conversations[index] = updatedConversation;
     } else {
-      spaces.push(updatedSpace);
+      conversations.push(updatedConversation);
     }
 
-    await setUserData(key, spaces);
-    return NextResponse.json(updatedSpace);
+    await setUserData(key, conversations);
+    return NextResponse.json(updatedConversation);
   }
 }

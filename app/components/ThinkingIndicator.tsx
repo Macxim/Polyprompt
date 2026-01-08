@@ -1,8 +1,11 @@
 type ThinkingIndicatorProps = {
   mode?: "default" | "bubble";
+  agentName?: string;
 };
 
-export default function ThinkingIndicator({ mode = "default" }: ThinkingIndicatorProps) {
+export default function ThinkingIndicator({ mode = "default", agentName }: ThinkingIndicatorProps) {
+  const text = agentName ? `${agentName} is thinking...` : "Thinking...";
+
   if (mode === "bubble") {
     return (
       <div className="flex items-center gap-2 py-1 px-1">
@@ -11,7 +14,7 @@ export default function ThinkingIndicator({ mode = "default" }: ThinkingIndicato
           <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
           <div className="w-1.5 h-1.5 bg-indigo-400 rounded-full animate-bounce"></div>
         </div>
-        <span className="text-xs font-medium text-slate-400 animate-pulse">Thinking...</span>
+        <span className="text-xs font-medium text-slate-400 animate-pulse">{text}</span>
       </div>
     );
   }
@@ -23,7 +26,8 @@ export default function ThinkingIndicator({ mode = "default" }: ThinkingIndicato
         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
         <div className="w-2 h-2 bg-indigo-400 rounded-full animate-bounce"></div>
       </div>
-      <span className="text-sm font-medium text-slate-500">Thinking...</span>
+      <span className="text-sm font-medium text-slate-500">{text}</span>
     </div>
   );
 }
+

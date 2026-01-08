@@ -1,14 +1,13 @@
-import { Agent, Space } from "../types";
+import { Agent, Conversation } from "../types";
 import { DEFAULT_AGENTS } from "../data/defaultAgents";
 
 export type AppState = {
   agents: Agent[];
-  spaces: Space[];
-  activeSpaceId: string | null;
+  conversations: Conversation[];
+  activeConversationId: string | null;
   activeAgentId: string | null;
   ui: {
     isAgentModalOpen: boolean;
-    isSpaceModalOpen: boolean;
     isConversationModalOpen: boolean;
     isSidebarOpen: boolean;
     bannerMessage: { message: string | null; type?: "success" | "error" };
@@ -18,12 +17,11 @@ export type AppState = {
 
 export const initialAppState: AppState = {
   agents: DEFAULT_AGENTS,
-  spaces: [],
-  activeSpaceId: null,
+  conversations: [],
+  activeConversationId: null,
   activeAgentId: null,
   ui: {
     isAgentModalOpen: false,
-    isSpaceModalOpen: false,
     isConversationModalOpen: false,
     isSidebarOpen: false,
     bannerMessage: { message: null, type: "success" },

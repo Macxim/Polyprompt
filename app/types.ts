@@ -46,7 +46,7 @@ export type Conversation = {
   id: string;
   title: string;
   messages: Message[];
-  participantIds?: string[];
+  participantIds: string[]; // Agent IDs in this conversation
   updatedAt?: number;
 };
 
@@ -55,21 +55,18 @@ export type SharedConversation = Conversation & {
   sharedAt: number;
 };
 
-export type Space = {
-  id: string;
-  name: string;
-  agentIds: string[];
-  conversations: Conversation[];
-};
+// REMOVED: Space type - conversations now live directly under user
 
 export type AppState = {
   agents: Agent[];
-  spaces: Space[];
-  activeSpaceId: string | null;
+  conversations: Conversation[];
+  activeConversationId: string | null;
   activeAgentId: string | null;
   ui: {
     isAgentModalOpen: boolean;
-    isSpaceModalOpen: boolean;
-    bannerMessage: { message: string | null };
+    isConversationModalOpen: boolean;
+    isSidebarOpen: boolean;
+    bannerMessage: { message: string | null; type?: "success" | "error" };
   };
+  _hydrated: boolean;
 };
