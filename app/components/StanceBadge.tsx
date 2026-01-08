@@ -19,10 +19,20 @@ const StanceBadge: React.FC<StanceBadgeProps> = ({ stance, round, phase }) => {
 
   const currentPhaseEmoji = phase ? (phaseEmoji[phase.toUpperCase()] || '💬') : '💬';
 
+  const getRoundClasses = (r: number) => {
+    switch (r) {
+      case 1: return "bg-slate-600 text-white border-slate-700";
+      case 2: return "bg-slate-800 text-white border-slate-900";
+      default: return "bg-slate-950 text-white border-slate-950";
+    }
+  };
+
   return (
     <div className="flex items-center gap-2">
       {round && (
-        <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-800 text-slate-100 border border-slate-700 uppercase tracking-tighter">
+        <span
+          className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-bold border uppercase tracking-tighter transition-colors ${getRoundClasses(round)}`}
+        >
           Round {round}
         </span>
       )}

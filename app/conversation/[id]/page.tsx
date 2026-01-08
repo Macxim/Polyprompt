@@ -13,10 +13,9 @@ import {
   Users,
   Trash2,
   ChevronDown,
-  Pencil,
-  Check,
   Download,
-  X
+  Plus,
+  MessageSquarePlus
 } from "lucide-react";
 
 const generateId = () => Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
@@ -38,18 +37,14 @@ export default function ConversationPage() {
   );
 
   // State
-  const [input, setInput] = useState("");
   const [thinkingAgent, setThinkingAgent] = useState<Agent | null>(null);
   const [showScrollButton, setShowScrollButton] = useState(false);
-  const [isEditingTitle, setIsEditingTitle] = useState(false);
-  const [editedTitle, setEditedTitle] = useState("");
   const [showExportMenu, setShowExportMenu] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
-  const inputRef = useRef<HTMLTextAreaElement>(null);
   const processedTriggerRef = useRef(false);
 
   // Initialize from URL params
@@ -73,6 +68,10 @@ export default function ConversationPage() {
         // Remove the trigger param to prevent double-execution
         const newSearchParams = new URLSearchParams(searchParams.toString());
         newSearchParams.delete("trigger");
+
+        // Remove prompt param as well
+        newSearchParams.delete("prompt");
+
         router.replace(`/conversation/${conversationId}?${newSearchParams.toString()}`);
 
         if (participantAgents.length >= 2) {
@@ -101,32 +100,7 @@ export default function ConversationPage() {
     setShowScrollButton(!isNearBottom);
   };
 
-  // Send message
-  const handleSend = async () => {
-    if (!input.trim() || !conversation) return;
 
-    const userMessage: Message = {
-      id: generateId(),
-      role: "user",
-      content: input.trim(),
-      timestamp: Date.now(),
-    };
-
-    dispatch({
-      type: "ADD_MESSAGE",
-      payload: { conversationId, message: userMessage },
-    });
-
-    setInput("");
-
-    // If we have 2+ agents, trigger debate
-    if (participantAgents.length >= 2) {
-      await runDebate(userMessage.content);
-    } else if (participantAgents.length > 0) {
-      // Single agent response
-      await getAgentResponse(participantAgents[0], userMessage.content);
-    }
-  };
 
   // Get single agent response
   const getAgentResponse = async (agent: Agent, userContent: string) => {
@@ -289,16 +263,7 @@ export default function ConversationPage() {
     }
   };
 
-  // Rename conversation
-  const handleRename = () => {
-    if (editedTitle.trim() && conversation) {
-      dispatch({
-        type: "RENAME_CONVERSATION",
-        payload: { conversationId, newTitle: editedTitle.trim() },
-      });
-      setIsEditingTitle(false);
-    }
-  };
+
 
   // Delete conversation
   const handleDelete = () => {
@@ -385,39 +350,11 @@ export default function ConversationPage() {
               <ArrowLeft className="w-5 h-5 text-slate-500" />
             </button>
 
-            {isEditingTitle ? (
-              <div className="flex items-center gap-2">
-                <input
-                  type="text"
-                  value={editedTitle}
-                  onChange={(e) => setEditedTitle(e.target.value)}
-                  className="border border-slate-300 rounded px-2 py-1 text-sm"
-                  autoFocus
-                  onKeyDown={(e) => e.key === "Enter" && handleRename()}
-                />
-                <button onClick={handleRename} className="text-green-600 hover:text-green-700">
-                  <Check className="w-4 h-4" />
-                </button>
-                <button onClick={() => setIsEditingTitle(false)} className="text-slate-400 hover:text-slate-500">
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
               <div className="flex items-center gap-2">
                 <h1 className="font-bold text-slate-800 truncate max-w-[200px] sm:max-w-none">
                   {conversation.title}
                 </h1>
-                <button
-                  onClick={() => {
-                    setEditedTitle(conversation.title);
-                    setIsEditingTitle(true);
-                  }}
-                  className="p-1 text-slate-400 hover:text-slate-600"
-                >
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
               </div>
-            )}
           </div>
 
           <div className="flex items-center gap-2">
@@ -504,31 +441,14 @@ export default function ConversationPage() {
       {/* Input */}
       <footer className="bg-white border-t border-slate-200 p-4">
         <div className="max-w-4xl mx-auto">
-          <div className="flex items-end gap-3">
-            <div className="flex-1 relative">
-              <textarea
-                ref={inputRef}
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSend();
-                  }
-                }}
-                placeholder="Ask a question..."
-                rows={1}
-                className="w-full resize-none border border-slate-200 rounded-xl px-4 py-3 pr-12 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-400"
-                style={{ minHeight: "48px", maxHeight: "120px" }}
-              />
-            </div>
-            <button
-              onClick={handleSend}
-              disabled={!input.trim() || !!thinkingAgent}
-              className="px-4 py-3 bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white rounded-xl transition-colors"
-            >
-              <Send className="w-5 h-5" />
-            </button>
+          <div className="flex justify-center">
+             <button
+                onClick={() => router.push("/")}
+                className="flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-full font-medium transition-all shadow-md hover:shadow-lg"
+              >
+                <MessageSquarePlus className="w-5 h-5" />
+                Start New Conversation
+              </button>
           </div>
 
           <div className="flex justify-center mt-3">
