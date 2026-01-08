@@ -8,13 +8,11 @@ import ThinkingIndicator from "../../components/ThinkingIndicator";
 import Banner from "../../components/Banner";
 import { Message, Agent } from "../../types";
 import {
-  Send,
   ArrowLeft,
   Users,
   Trash2,
   ChevronDown,
   Download,
-  Plus,
   MessageSquarePlus
 } from "lucide-react";
 
@@ -50,14 +48,8 @@ export default function ConversationPage() {
   // Initialize from URL params
   useEffect(() => {
     const autoParam = searchParams.get("auto");
-    const promptParam = searchParams.get("prompt");
     const triggerParam = searchParams.get("trigger");
 
-    if (promptParam) {
-      setInput(promptParam);
-    }
-
-    // Auto-trigger debate/response if requested (e.g. from home page)
     // Auto-trigger debate/response if requested (e.g. from home page)
     if (triggerParam === "true" && conversation && conversation.messages.length > 0) {
       const lastMessage = conversation.messages[conversation.messages.length - 1];
