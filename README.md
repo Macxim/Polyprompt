@@ -8,9 +8,6 @@ Polyprompt is a high-performance, modern web application designed for complex br
 
 ## ✨ Key Features
 
-### 🏢 Intelligent Spaces
-Organize your projects into **Spaces**. Each space is a dedicated room with its own set of agents and conversation history. Keep your "Marketing Campaign" separate from your "Product Strategy" with ease.
-
 ### 🤖 Specialized Agent Personas
 Assemble your dream team from a library of default agents or create your own:
 - **Strategic Analyst**: Data-driven consultant for long-term planning.
@@ -22,6 +19,11 @@ Assemble your dream team from a library of default agents or create your own:
 Orchestrate multi-agent debates automatically. Choose between:
 - **Quick Mode**: Rapid-fire feedback from multiple perspectives.
 - **Deep Dive**: Extensive, multi-turn reasoning and collaboration between agents.
+
+### 🔓 Open Access
+Start debating immediately without signing up.
+- **Free Guest Access**: Ask up to 3 questions per day instantly.
+- **Authenticated Power**: Sign in to save history, sync across devices, and bring your own API key for unlimited usage.
 
 ### 🔗 Seamless Sharing
 Generate beautiful, read-only links for your conversations to share insights with teammates or stakeholders.

@@ -8,15 +8,7 @@ export default withAuth({
 
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - /auth (sign in page)
-     * - /api/auth (auth API)
-     * - /share (public sharing links)
-     * - /api/share (public sharing API)
-     * - /_next (Next.js internals)
-     * - /favicon.ico, /robots.txt (static files)
-     */
-    "/((?!auth|api/auth|api/register|share|api/share|_next|favicon.ico|robots.txt).*)",
+    // Exclude auth, apis, static files, root (empty path/end), and conversation routes
+    "/((?!$|auth|api/auth|api/register|share|api/share|api/chat|api/debate-plan|conversation|_next|favicon.ico|robots.txt).*)",
   ],
 }

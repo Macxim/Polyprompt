@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
+import { checkRateLimit } from "@/lib/rate-limit";
 
 export const runtime = "nodejs";
 
@@ -45,9 +46,30 @@ export async function POST(req: Request) {
     // ------------------------------------------------------------------------
 
     const session = await getServerSession(authOptions);
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    let userId = session?.user?.id;
+
+    // Optional Auth & Rate Limiting (if not signed in)
+    if (!userId) {
+      // Get IP
+      const forwardedFor = req.headers.get("x-forwarded-for");
+      const ip = forwardedFor ? forwardedFor.split(",")[0] : "127.0.0.1";
+
+      const { success, remaining } = await checkRateLimit(ip);
+
+      if (!success) {
+        return NextResponse.json(
+          {
+            error: "Daily Limit Reached",
+            message: "You've used your 3 free questions for today. Sign in for more.",
+          },
+          { status: 429 }
+        );
+      }
+
+      // Assign temporary ID for unauth users to allow flow to continue (though getApiKey will return null/sys key)
+      userId = `guest-${ip}`;
     }
+
 
     const { prompt, agents } = await req.json();
 
@@ -63,8 +85,8 @@ export async function POST(req: Request) {
     // ------------------------------------------------------------------------
 
     const apiKey = await getApiKeyForUser(
-      session.user.id,
-      session.user.email || undefined
+      session?.user?.id || "", // Pass empty if no session, getApiKeyForUser should handle it or we use fallback handling below
+      session?.user?.email || undefined
     );
 
     if (!apiKey) {
