@@ -24,9 +24,30 @@ const outfit = Outfit({
 import SidebarLayout from "./components/SidebarLayout";
 import { CSPostHogProvider } from "./providers/PostHogProvider";
 
+const APPTITLE = "Polyprompt - Ask a question, get a debate.";
+const APPDESC = "AI agents argue different perspectives so you can make better decisions.";
+
 export const metadata: Metadata = {
-  title: "Polyprompt",
-  description: "Spaces and AI agents",
+  title: APPTITLE,
+  description: APPDESC,
+  openGraph: {
+    title: APPTITLE,
+    description: APPDESC,
+    images: [
+      {
+        url: "/og.png",
+        width: 1200,
+        height: 630,
+        alt: APPTITLE,
+      },
+    ],
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: APPTITLE,
+    description: APPDESC,
+    images: ["/og.png"],
+  },
 };
 
 export default function RootLayout({
