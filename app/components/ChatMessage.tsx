@@ -84,12 +84,12 @@ const ChatMessage = React.memo(({ msg, agents, allMessages = [] }: ChatMessagePr
               className="mt-0.5"
             />
             <div className="flex flex-col min-w-0 flex-1">
-               <div className="flex items-center gap-2 mb-1">
-                 <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none">
-                   {msg.agentName}
-                 </span>
-                 <StanceBadge stance={msg.stance} round={msg.round} phase={msg.phase} />
-               </div>
+                <div className="flex flex-wrap items-center gap-2 mb-1">
+                  <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider leading-none whitespace-nowrap">
+                    {msg.agentName}
+                  </span>
+                  <StanceBadge stance={msg.stance} round={msg.round} phase={msg.phase} />
+                </div>
 
                {msg.respondingToId && respondingToName && (
                  <div className="text-[10px] text-indigo-500/70 font-bold mb-1 flex items-center gap-1">

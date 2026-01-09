@@ -176,6 +176,7 @@ export default function ConversationPage() {
 
       const plan = await planResponse.json();
       const options = plan.options || [];
+      const isOpen = plan.isOpen || false;
 
       // Execute each step in the plan
       for (const step of plan.plan) {
@@ -215,6 +216,7 @@ export default function ConversationPage() {
             options,
             round: step.round,
             phase: step.phase,
+            isOpen,
           }),
         });
 

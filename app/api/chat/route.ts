@@ -77,7 +77,7 @@ ${containsMoney ? `
 **Critical Numbers:**
 [MUST CALCULATE: breakeven years, ROI comparison, annual amounts, hourly rates, compound growth, or whatever numbers are relevant to this decision. NEVER write "N/A" here.]
 
-**The Math Says:** [One decisive sentence based on your calculations]
+**The Math Says:** [One decisive sentence based on calculations]
 ` : ''}
 
 **Assumptions to Challenge:**
@@ -146,7 +146,7 @@ Avoid: Surface analysis, fence-sitting, avoiding clear positions`,
 
   'creative_ideator': `Style: Innovative, future-focused, explores unconventional angles.
 Phrases: "What if we reframe this...", "The emerging trend shows", "Innovation requires"
-Avoid: Clichés, generic "think outside the box" rhetoric`
+Avoid: Clichés, generic "think outside the box" rhetoric, hedging with "it depends".`
 } as const;
 
 // ============================================================================
@@ -158,21 +158,22 @@ const PHASE_PROMPTS = {
 This is your opening statement - make it count.
 Be specific and opinionated.`,
 
-  CONFRONTATION: (previousAgentName: string, previousContent: string) => {
-    const claims = previousContent.split('**').filter(s => s.trim().length > 10).slice(0, 3);
+  CONFRONTATION: (previousAgentName: string, previousContent: string, isOpen: boolean = false) => {
+    const snippet = previousContent.substring(0, 400);
 
     return `
-The opposing agent (${previousAgentName}) just argued:
-"${previousContent.substring(0, 400)}..."
+The other agent (${previousAgentName}) just argued:
+"${snippet}..."
 
-YOUR MISSION: Surgically dismantle their WEAKEST argument.
+YOUR MISSION: ${isOpen ? "Deepen the analysis by addressing their points." : "Surgically dismantle their WEAKEST argument."}
 
-REQUIRED ATTACK PATTERN:
-1. Identify their weakest claim: "${claims[0]?.substring(0, 50) || 'their main argument'}..."
-2. Explain the hidden assumption they're making
-3. Provide counter-evidence or real-world example that contradicts it
-4. Pivot back to why your position is superior
+REQUIRED PATTERN:
+1. Identify their ${isOpen ? "main" : "weakest"} claim
+2. Explain the ${isOpen ? "perspective" : "hidden assumption"} they're making
+3. Provide ${isOpen ? "alternative angle or context" : "counter-evidence or real-world example"} that ${isOpen ? "complements or challenges" : "contradicts"} it
+4. Pivot back to why your position is ${isOpen ? "critical" : "superior"}
 
+${isOpen ? '' : `
 EXAMPLES OF GOOD REBUTTALS:
 ✅ "${previousAgentName} claims higher pay justifies 60-hour weeks, but this ignores the burnout cliff. Studies show productivity drops 25% after 50 hours/week. You're not earning more—you're earning LESS per hour of output."
 
@@ -182,17 +183,18 @@ EXAMPLES OF BAD REBUTTALS:
 ❌ "While ${previousAgentName} makes good points, I believe..." [Too agreeable]
 ❌ "Here are more benefits of my position..." [Ignoring their argument]
 ❌ "Both options have merit..." [Position betrayal]
+`}
 
 STRICT RULES:
-- Start by naming what they got wrong
+- ${isOpen ? "Name what they correctly identified, then pivot" : "Start by naming what they got wrong"}
 - Use specific examples or data
 - Under 120 words
-- NEVER concede ground without immediately taking it back`;
+- ${isOpen ? "Maintain your assigned perspective" : "NEVER concede without taking ground back"}`;
   },
 
   SYNTHESIS: `This is the final wrap-up. Provide clear, actionable decision criteria.
 DO NOT introduce new arguments or pick a side.
-Your job is to help the user decide for themselves based on their specific situation.`
+Help the user decide based on their specific situation.`
 } as const;
 
 // ============================================================================
@@ -204,23 +206,25 @@ function getAgentStyle(agentId?: string): string {
   return AGENT_STYLES[agentId as keyof typeof AGENT_STYLES];
 }
 
-function getPhaseInstruction(phase?: string, previousAgentName?: string, previousContent?: string): string {
+function getPhaseInstruction(
+  isOpen: boolean,
+  phase?: string,
+  previousAgentName?: string,
+  previousContent?: string
+): string {
   if (!phase) return '';
 
   if (phase === 'CONFRONTATION') {
     if (previousAgentName && previousContent) {
-      return PHASE_PROMPTS.CONFRONTATION(previousAgentName, previousContent);
+      return PHASE_PROMPTS.CONFRONTATION(previousAgentName, previousContent, isOpen);
     }
-    return 'Attack the previous agent\'s arguments. Be specific and confrontational.';
+    return isOpen
+      ? 'Deepen the analysis by exploring the previous agent\'s points from your perspective.'
+      : 'Attack the previous agent\'s arguments. Be specific and confrontational.';
   }
 
-  if (phase === 'OPENING') {
-    return PHASE_PROMPTS.OPENING;
-  }
-
-  if (phase === 'SYNTHESIS') {
-    return PHASE_PROMPTS.SYNTHESIS;
-  }
+  if (phase === 'OPENING') return PHASE_PROMPTS.OPENING;
+  if (phase === 'SYNTHESIS') return PHASE_PROMPTS.SYNTHESIS;
 
   return '';
 }
@@ -237,100 +241,12 @@ function calculateCost(model: string, promptTokens: number, completionTokens: nu
 }
 
 // ============================================================================
-// VALIDATION FUNCTIONS
+// MAIN API HANDLER
 // ============================================================================
 
-async function validatePositionDefense(
-  openai: OpenAI,
-  response: string,
-  targetPosition: string,
-  opposingPosition: string
-): Promise<{ isValid: boolean; reason?: string; confidence?: number }> {
-  const validationPrompt = `Evaluate if this response defends "${targetPosition}" or betrays it.
-
-STRICT VALIDATION RULES:
-1. It MUST argue forcefully FOR "${targetPosition}"
-2. It MUST NOT say "${opposingPosition} has good points" or concede major ground
-3. It MUST NOT be neutral or say "both options are valid"
-4. If it starts by praising "${opposingPosition}", it's INVALID
-5. Minor acknowledgments are OK if followed by strong counter-arguments
-
-Response to evaluate:
-"${response.substring(0, 500)}"
-
-Return JSON:
-{
-  "isValid": true/false,
-  "reason": "specific issue found" or "defends position correctly",
-  "confidence": 0.0-1.0
-}`;
-
-  try {
-    const check = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: validationPrompt },
-        { role: "user", content: "Validate this response." }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3
-    });
-
-    return JSON.parse(check.choices[0].message.content || '{"isValid": true}');
-  } catch (e) {
-    console.error('Validation failed:', e);
-    return { isValid: true };
-  }
-}
-
-async function validateSynthesisNeutrality(
-  openai: OpenAI,
-  response: string,
-  options: string[]
-): Promise<{ isValid: boolean; reason?: string; biasDetected?: string }> {
-  const [optA, optB] = options;
-
-  const validationPrompt = `Evaluate this synthesis for neutrality and proper format.
-
-Options being compared: "${optA}" vs "${optB}"
-
-RULES FOR VALID SYNTHESIS:
-1. NO SIDE-PICKING: Must not say one option is "better", "superior", or "recommended"
-2. FORMAT: Must contain "Choose ${optA} if:" and "Choose ${optB} if:"
-3. BALANCE: Should provide equal weight to both options
-4. NO ADVOCACY: Avoid "the best choice is", "clearly superior", "you should"
-5. DECISION CRITERIA: Should provide conditions, not conclusions
-
-Synthesis to evaluate:
-"${response.substring(0, 800)}"
-
-Return JSON:
-{
-  "isValid": true/false,
-  "reason": "explanation of issue or 'synthesis is neutral'",
-  "biasDetected": "A" or "B" or "none"
-}`;
-
-  try {
-    const check = await openai.chat.completions.create({
-      model: "gpt-4o-mini",
-      messages: [
-        { role: "system", content: validationPrompt },
-        { role: "user", content: "Validate synthesis." }
-      ],
-      response_format: { type: "json_object" },
-      temperature: 0.3
-    });
-
-    return JSON.parse(check.choices[0].message.content || '{"isValid": true}');
-  } catch (e) {
-    console.error('Synthesis validation failed:', e);
-    return { isValid: true };
-  }
-}
-
-// ============================================================================
 export async function POST(req: Request) {
+  console.log("💬 Chat API called");
+
   try {
     const session = await getServerSession(authOptions);
     await ensureConnection();
@@ -346,55 +262,35 @@ export async function POST(req: Request) {
       options = [],
       round,
       phase,
-      previousAgentName
+      previousAgentName,
+      isOpen = false
     } = body;
+
+    console.log(`📊 Debate turn: ${debateTurn}, Round: ${round}, Phase: ${phase}, isOpen: ${isOpen}`);
 
     let userId = session?.user?.id;
 
-    // OPTIONAL AUTH: Check rate limit if no session
+    // Rate limiting for unauthenticated users
     if (!userId) {
-       const forwardedFor = req.headers.get("x-forwarded-for");
-       const ip = forwardedFor ? forwardedFor.split(",")[0] : "127.0.0.1";
+      const forwardedFor = req.headers.get("x-forwarded-for");
+      const ip = forwardedFor ? forwardedFor.split(",")[0] : "127.0.0.1";
 
-       // Count debate turns or first messages against rate limit
-       // 'countAsUserMessage' is true for user messages. It might be false for automated debate turns?
-       // Actually debate turns are triggered by frontend loop, so they come as separate requests.
-       // We should count them if they consume resources.
-       // The plan said: "count each call ... for the *first* message".
-       // But if we only count first message, a debate (5 turns) is cheap.
-       // If we count every turn, 3 limit is very low (less than 1 debate).
-       // Let's stick to the plan: "3 questions". So we should rate limit checking mainly ONCE per conversation start?
-       // But this API is stateless. It doesn't know if it's start of converastion easily without checking history length.
+      const isNewConversation = conversationHistory.length === 0;
 
-       // Simplification:
-       // If `messages.length` is small (just user message), it's a new question.
-       // But debate steps also have history.
+      if (isNewConversation || debateTurn) {
+        const { success } = await checkRateLimit(ip);
+        if (!success) {
+          return new Response(JSON.stringify({
+            error: "Daily Limit Reached",
+            message: "You've used your free allowance for today. Sign in for more."
+          }), {
+            status: 429,
+            headers: { "Content-Type": "application/json" }
+          });
+        }
+      }
 
-       // Strict but safe: Check rate limit on every call for unauth.
-       // To allow 3 *debates* (approx 15 calls), we might need a higher limit or a smarter check.
-       // Let's up the limit to 15 for now if we count every call, or keep 3 if we can detect "New Question".
-       // Actually `debate-plan` is one call. `chat` is multiple.
-       // Let's just limit `debate-plan` strictly (3/day) and `chat` loosely (to prevent abuse)?
-       // Or: `chat` only checks limit if it's the *first* message?
-       // Frontend sends `conversationHistory`. If empty, it's first?
-
-       const isNewConversation = conversationHistory.length === 0;
-
-       if (isNewConversation || debateTurn) {
-         // Count it.
-         // Wait, if I limit strictly to 3, one debate (5 turns) fails after 3 turns.
-         // I should probably set limit to 20 for unauth users on CHAT, but 3 on DEBATE-PLAN.
-         // Let's try to pass the implementation with a check.
-         const { success } = await checkRateLimit(ip);
-         if (!success) {
-            return new Response(JSON.stringify({
-              error: "Daily Limit Reached",
-              message: "You've used your free allowance for today. Sign in for more."
-            }), { status: 429 });
-         }
-       }
-
-       userId = `guest-${ip}`;
+      userId = `guest-${ip}`;
     }
 
     // Budget check
@@ -412,7 +308,11 @@ export async function POST(req: Request) {
     }
 
     // API key check
-    const apiKey = await getApiKeyForUser(session?.user?.id || "", session?.user?.email || undefined);
+    const apiKey = await getApiKeyForUser(
+      session?.user?.id || "",
+      session?.user?.email || undefined
+    );
+
     if (!apiKey) {
       return new Response(JSON.stringify({
         error: "API Key Required",
@@ -425,7 +325,7 @@ export async function POST(req: Request) {
 
     const openai = new OpenAI({ apiKey });
 
-    // Rate limiting (Free Tier Authenticated Only - tracked by user ID)
+    // Rate limiting for authenticated users on system key
     const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
     if (session?.user?.id && isUsingSystemKey && countAsUserMessage) {
       const dailyKey = keys.userDailyMessages(session.user.id);
@@ -448,51 +348,52 @@ export async function POST(req: Request) {
 
     // Track event
     if (session?.user?.id) {
-        posthog.capture({
+      posthog.capture({
         distinctId: session.user.id,
         event: 'message_sent',
         properties: {
-            agent_id: agent.id,
-            agent_name: agent.name,
-            model: agent.model || "gpt-4o-mini",
-            is_byok: !isUsingSystemKey,
-            debate_turn: debateTurn,
-            target_position: targetPosition,
-            round,
-            phase
+          agent_id: agent.id,
+          agent_name: agent.name,
+          model: agent.model || "gpt-4o-mini",
+          is_byok: !isUsingSystemKey,
+          debate_turn: debateTurn,
+          target_position: targetPosition,
+          round,
+          phase,
+          is_open: isOpen
         }
-        });
+      });
     }
 
     // Build system prompt
     const isSummary = debateTurn === 'summary';
-
     const userQuestion = messages.find((m: any) => m.role === 'user')?.content || '';
 
     const agentStyle = getAgentStyle(agent.id);
     const phaseInstruction = getPhaseInstruction(
+      isOpen,
       phase,
       previousAgentName,
       conversationHistory[conversationHistory.length - 1]?.content
     );
 
-    // Position enforcement
+    // Position enforcement for debate turns
     const opposingPosition = targetPosition ? options.find((o: string) => o !== targetPosition) : null;
-    const positionEnforcement = targetPosition ? `
+    const positionEnforcement = targetPosition && !isSummary ? `
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 🎯 YOUR ASSIGNED POSITION (LOCKED - NEVER CHANGES)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 You MUST defend: ${targetPosition}
-You are arguing AGAINST: ${opposingPosition}
+You are ${isOpen ? "exploring this perspective against" : "arguing AGAINST"}: ${opposingPosition}
 
 CRITICAL RULES:
-1. You MUST advocate forcefully for ${targetPosition}
+1. You MUST advocate for ${targetPosition}
 2. You CANNOT switch sides or become neutral
-3. You CANNOT say "${opposingPosition} has good points" without immediately pivoting to why ${targetPosition} is still superior
-4. Even minor concessions must end with strong defense of ${targetPosition}
+3. ${isOpen ? "You explore your perspective while acknowledging others" : "You attack the opposing view"}
+4. Stay within your assigned lens
 
-Your goal: WIN the argument for ${targetPosition}.` : '';
+Your goal: ${isOpen ? "Deepen understanding of" : "WIN the argument for"} ${targetPosition}.` : '';
 
     // Argument memory (prevent repetition)
     const previousArguments = conversationHistory
@@ -501,29 +402,24 @@ Your goal: WIN the argument for ${targetPosition}.` : '';
       .join('\n- ');
 
     const argumentMemory = previousArguments && !isSummary ? `
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ⚠️  ARGUMENTS YOU ALREADY MADE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 - ${previousArguments}
 
-STRICT RULE: DO NOT repeat these arguments.
-You MUST find NEW angles, NEW evidence, or NEW counterpoints.
-Repetition = failure.` : '';
+DO NOT repeat these. Find NEW angles, evidence, or counterpoints.` : '';
 
     // Verbosity control
     const verbosityLimit = `
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📏 LENGTH LIMIT: ${isSummary ? '200 WORDS' : '100 WORDS'} MAX
+📏 LENGTH LIMIT: ${isSummary ? '200 WORDS' : '120 WORDS'} MAX
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Rules:
-- Each point: 1-2 sentences maximum
-- Use bold **headers** for each argument
+- Each point: 1-2 sentences
+- Use bold **headers** for structure
 - Be punchy and direct
-- No fluff, no filler
+- No fluff
 
 Good: "**Trust matters.** Customers respect honesty. Hidden pricing feels like a trap."
 Bad: "Pricing transparency is fundamentally important because it builds trust with customers by demonstrating honesty..."`;
@@ -539,6 +435,7 @@ ${agentStyle}
 🎭 DEBATE CONTEXT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
+Question Type: ${isOpen ? "OPEN (Exploring perspectives)" : "COMPARATIVE (Choosing between options)"}
 Phase: ${phase || 'DISCUSSION'}
 Round: ${round || 1}
 
@@ -550,7 +447,9 @@ ${argumentMemory}
 
 ${verbosityLimit}`;
 
-    // Build message history with position annotations
+    console.log(`🎯 System prompt built. Length: ${systemPrompt.length} chars`);
+
+    // Build message history
     const annotatedHistory = conversationHistory.map((msg: any) => {
       const stanceLabel = msg.stance ? ` [Defending: ${msg.stance}]` : '';
       const agentLabel = msg.agentName ? `${msg.agentName}${stanceLabel}: ` : '';
@@ -571,9 +470,11 @@ ${verbosityLimit}`;
     if (targetPosition && !isSummary) {
       openaiMessages.push({
         role: "system" as const,
-        content: `🚨 FINAL REMINDER: You are defending ${targetPosition}. Do NOT switch sides. Attack ${opposingPosition}.`
+        content: `🚨 FINAL REMINDER: You are defending ${targetPosition}. ${isOpen ? "Explore this perspective deeply." : `Do NOT switch sides. Keep the same stance. Attack ${opposingPosition}.`}`
       });
     }
+
+    console.log(`📤 Sending to OpenAI. Total messages: ${openaiMessages.length}`);
 
     // Stream response
     const selectedModel = agent.model || "gpt-4o-mini";
@@ -585,15 +486,19 @@ ${verbosityLimit}`;
       stream_options: { include_usage: true }
     });
 
+    console.log("✅ Stream started");
+
     const encoder = new TextEncoder();
     const stream = new ReadableStream({
       async start(controller) {
         try {
           let tokenUsage: any = null;
+          let chunkCount = 0;
 
           for await (const chunk of response) {
             const content = chunk.choices[0]?.delta?.content || "";
             if (content) {
+              chunkCount++;
               controller.enqueue(encoder.encode(content));
             }
 
@@ -606,17 +511,21 @@ ${verbosityLimit}`;
             }
           }
 
+          console.log(`✅ Stream complete. Chunks: ${chunkCount}`);
+
           // Track cost
           if (tokenUsage) {
             const cost = calculateCost(selectedModel, tokenUsage.prompt, tokenUsage.completion);
             if (cost > 0) {
               await redis.incrByFloat(keys.systemSpend, cost);
             }
+            console.log(`💰 Cost: $${cost.toFixed(6)}, Tokens: ${tokenUsage.total}`);
             controller.enqueue(encoder.encode(`\n__TOKENS__${JSON.stringify(tokenUsage)}`));
           }
 
           controller.close();
         } catch (error) {
+          console.error("❌ Stream error:", error);
           controller.error(error);
         }
       }
@@ -630,15 +539,26 @@ ${verbosityLimit}`;
     });
 
   } catch (error: any) {
-    console.error("Chat API error:", error);
+    console.error("❌ Chat API error:", error);
 
     if (error?.status === 401) {
-      return new Response("Invalid API key", { status: 401 });
+      return new Response(JSON.stringify({ error: "Invalid API key" }), {
+        status: 401,
+        headers: { "Content-Type": "application/json" }
+      });
     }
     if (error?.status === 429) {
-      return new Response("Rate limit exceeded", { status: 429 });
+      return new Response(JSON.stringify({ error: "Rate limit exceeded" }), {
+        status: 429,
+        headers: { "Content-Type": "application/json" }
+      });
     }
 
-    return new Response(error?.message || "Internal server error", { status: 500 });
+    return new Response(JSON.stringify({
+      error: error?.message || "Internal server error"
+    }), {
+      status: 500,
+      headers: { "Content-Type": "application/json" }
+    });
   }
 }

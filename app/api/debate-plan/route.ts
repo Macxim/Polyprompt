@@ -102,23 +102,43 @@ export async function POST(req: Request) {
     const openai = new OpenAI({ apiKey });
 
     // ------------------------------------------------------------------------
-    // ANALYSIS
+    // ANALYSIS (Open vs Comparative)
     // ------------------------------------------------------------------------
 
-    const analysis = analyzeQuestion(prompt);
+    const typeDetection = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        {
+          role: "system",
+          content: `Analyze if a question is OPEN (exploring one thing) or COMPARATIVE (choosing between options).
+
+OPEN questions: "Should I...", "What about...", "Is X good...", "Tell me about...", "Pros and cons of X"
+COMPARATIVE questions: "X or Y?", "Which is better...", "Should I choose X or Y...", "Pros/cons of X vs Y"
+
+Respond with ONLY a JSON object: {"type": "open"} or {"type": "comparative"}`
+        },
+        { role: "user", content: `Question: "${prompt}"` }
+      ],
+      response_format: { type: "json_object" },
+      temperature: 0
+    });
+
+    const typeData = JSON.parse(typeDetection.choices[0]?.message?.content || '{"type": "comparative"}');
+    const isOpen = typeData.type === "open";
 
     // ------------------------------------------------------------------------
-    // DIRECTOR PROMPT (unchanged)
+    // DIRECTOR PROMPT
     // ------------------------------------------------------------------------
 
-
-const directorPrompt = `You are the "Lean Debate Director" - an expert at orchestrating high-quality, concise debates.
+const directorPrompt = `You are the "Lean Debate Director" - an expert at orchestrating high-quality, concise discussions.
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-📋 QUESTION TO DEBATE
+📋 QUESTION TO ANALYZE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 "${prompt}"
+
+QUESTION TYPE: ${isOpen ? "OPEN (Exploring perspectives)" : "COMPARATIVE (Choosing between options)"}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 👥 AVAILABLE AGENTS
@@ -135,27 +155,24 @@ ${agents
 🎯 YOUR MISSION
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Create a LEAN, HIGH-IMPACT debate plan with EXACTLY 5 TURNS:
+Create a LEAN, HIGH-IMPACT discussion plan with EXACTLY 5 TURNS:
 
 STRUCTURE (NON-NEGOTIABLE):
-- Turn 1-2: OPENING (Round 1) - Two agents state opposing positions
-- Turn 3-4: REBUTTAL (Round 2) - Same agents attack each other's arguments
+- Turn 1-2: OPENING (Round 1) - Two agents state their perspectives
+- Turn 3-4: REBUTTAL/DEEPENING (Round 2) - Same agents interact with each other's points
 - Turn 5: SYNTHESIS (Round 3) - Neutral wrap-up with decision criteria
 
 CRITICAL DIRECTOR RULES:
 
-1️⃣ IDENTIFY TWO CLEAR OPTIONS
-   - Extract the two options being compared from the question
-   - Make them specific and actionable
-   - Example: "$1000/week for life" vs "$1 million lump sum now"
+1️⃣ IDENTIFY KEY PERSPECTIVES / OPTIONS
+   ${isOpen
+     ? "- Extract two distinct ANGLES or SUB-TOPICS to explore\n   - Example for 'Should I eat churros?': 'Immediate Pleasure/Tradition' vs 'Health/Long-term Impact'"
+     : "- Extract the two OPTIONS being compared\n   - Example: '$1000/week for life' vs '$1 million lump sum now'"}
 
 2️⃣ ASSIGN CONSISTENT POSITIONS
-   - Agent A defends Option 1 in BOTH Round 1 and Round 2
-   - Agent B defends Option 2 in BOTH Round 1 and Round 2
+   - Agent A defends Angle/Option 1 in BOTH Round 1 and Round 2
+   - Agent B defends Angle/Option 2 in BOTH Round 1 and Round 2
    - Agents NEVER switch sides
-   - Example:
-     ✅ CORRECT: Strategic Analyst defends Option A in turns 1 AND 3
-     ❌ WRONG: Strategic Analyst defends Option A in turn 1, then Option B in turn 3
 
 3️⃣ ENFORCE BREVITY
    - Instruct each agent to keep responses to 100 words MAX
@@ -166,39 +183,38 @@ CRITICAL DIRECTOR RULES:
    ${getUniversalDirectorGuidance()}
 
 5️⃣ ROUND 2 MUST REFERENCE ROUND 1
-   - In Round 2, agents must ATTACK specific claims from Round 1
-   - Instruction should include: "Attack [opponent]'s claim that..."
-   - NOT generic: "defend your position"
+   - In Round 2, agents must interact with specific claims from Round 1
+   - Instruction should include: "${isOpen ? "Deepen the analysis by addressing" : "Attack"} [opponent]'s claim that..."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 📤 OUTPUT FORMAT (STRICT JSON)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 {
-  "options": ["Option A Name", "Option B Name"],
+  "options": ["Perspective A Name", "Perspective B Name"],
   "plan": [
     {
       "round": 1,
       "phase": "OPENING",
       "agentId": "agent_id_here",
-      "targetPosition": "Option A Name",
-      "instruction": "Make your 100-word opening case for [Option A]. Be specific and opinionated. Example: Focus on [specific benefit]. Avoid: generic statements.",
+      "targetPosition": "Perspective A Name",
+      "instruction": "Make your 100-word opening case for [Perspective A]. Be specific and opinionated.",
       "type": "discussion"
     },
     {
       "round": 1,
       "phase": "OPENING",
       "agentId": "different_agent_id",
-      "targetPosition": "Option B Name",
-      "instruction": "Make your 100-word opening case for [Option B]. Be specific and opinionated.",
+      "targetPosition": "Perspective B Name",
+      "instruction": "Make your 100-word opening case for [Perspective B]. Be specific and opinionated.",
       "type": "discussion"
     },
     {
       "round": 2,
       "phase": "CONFRONTATION",
       "agentId": "first_agent_id_again",
-      "targetPosition": "Option A Name",
-      "instruction": "Attack [Agent B]'s claim that [specific claim from their opening]. Defend [Option A] by showing why [specific counterpoint]. Under 100 words.",
+      "targetPosition": "Perspective A Name",
+      "instruction": "${isOpen ? "Address" : "Attack"} [Agent B]'s claim that [specific claim]. ${isOpen ? "Show why [Perspective A] provides a more critical lens on this." : "Defend [Perspective A] by showing why [specific counterpoint]."} Under 100 words.",
       "type": "discussion",
       "respondingToStepIndex": 1
     },
@@ -206,8 +222,8 @@ CRITICAL DIRECTOR RULES:
       "round": 2,
       "phase": "CONFRONTATION",
       "agentId": "second_agent_id_again",
-      "targetPosition": "Option B Name",
-      "instruction": "Attack [Agent A]'s claim that [specific claim]. Defend [Option B] with [specific counter]. Under 100 words.",
+      "targetPosition": "Perspective B Name",
+      "instruction": "${isOpen ? "Address" : "Attack"} [Agent A]'s claim that [specific claim]. ${isOpen ? "Show why [Perspective B] is the more important factor to consider." : "Defend [Perspective B] with [specific counter]."} Under 100 words.",
       "type": "discussion",
       "respondingToStepIndex": 0
     },
@@ -216,7 +232,7 @@ CRITICAL DIRECTOR RULES:
       "phase": "SYNTHESIS",
       "agentId": "any_agent_id",
       "targetPosition": null,
-      "instruction": "Provide neutral synthesis: 'Choose [Option A] if: [conditions]. Choose [Option B] if: [conditions].' Include numbers if financial question. Under 150 words.",
+      "instruction": "Provide neutral synthesis: 'Consider [Perspective A] if: [conditions]. Consider [Perspective B] if: [conditions].' Under 150 words.",
       "type": "summary"
     }
   ]
@@ -331,7 +347,7 @@ CRITICAL VALIDATION CHECKLIST:
     // RETURN
     // ------------------------------------------------------------------------
 
-    return NextResponse.json(data);
+    return NextResponse.json({ ...data, isOpen });
   } catch (error: any) {
     console.error("Debate plan API error:", error);
     return NextResponse.json(
