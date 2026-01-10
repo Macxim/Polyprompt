@@ -397,6 +397,7 @@ export default function ConversationPage() {
         ref={messagesContainerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
+        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}
       >
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
           {conversation.messages.length === 0 ? (

@@ -217,10 +217,10 @@ export default function Home() {
                       />
 
                       {/* Agent Selection Toggle */}
-                      <div className="flex items-center justify-between mt-3 pt-3 border-t border-slate-100">
+                      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mt-3 pt-3 border-t border-slate-100">
                         <button
                           onClick={() => setShowAgentPicker(!showAgentPicker)}
-                          className="flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
+                          className="order-2 sm:order-1 w-full sm:w-auto justify-center sm:justify-start py-2 mt-3 sm:mb-0 flex items-center gap-2 text-sm text-slate-500 hover:text-indigo-600 transition-colors"
                         >
                           <Users className="w-4 h-4" />
                           <span>{selectedAgentIds.length} agents selected</span>
@@ -229,7 +229,7 @@ export default function Home() {
                         <button
                           onClick={handleStartConversation}
                           disabled={!question.trim() || selectedAgentIds.length < 2}
-                          className="bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
+                          className="order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-start bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
                         >
                           Start Debate
                           <ArrowRight className="w-4 h-4" />
@@ -281,7 +281,7 @@ export default function Home() {
                   <p className="text-slate-500 text-sm">Continue where you left off</p>
                 </div>
 
-                <div className="grid gap-4">
+                <div className="grid grid-cols-1 gap-4">
                   {[...state.conversations]
                     .sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0))
                     .slice(0, 10)

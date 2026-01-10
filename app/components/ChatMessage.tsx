@@ -39,7 +39,7 @@ const ChatMessage = React.memo(({ msg, agents, allMessages = [] }: ChatMessagePr
       className={`flex w-full group ${msg.role === "user" ? "justify-end" : "justify-start"} animate-slide-up`}
     >
       <div
-        className={`max-w-[85%] sm:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm relative ${
+        className={`max-w-full sm:max-w-[75%] rounded-2xl px-5 py-4 shadow-sm relative ${
           msg.role === "user"
             ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-none"
             : msg.isSummary
