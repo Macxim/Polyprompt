@@ -330,7 +330,7 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50">
+    <div className="flex flex-col h-screen bg-slate-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
       <Banner maxWidth="4xl" />
 
       {/* Header */}
@@ -397,7 +397,6 @@ export default function ConversationPage() {
         ref={messagesContainerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto"
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}
       >
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
           {conversation.messages.length === 0 ? (
