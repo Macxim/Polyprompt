@@ -16,7 +16,8 @@ import {
   Users,
   Check,
   LogIn,
-  LogOut
+  LogOut,
+  Loader2
 } from "lucide-react";
 
 // Basic ID generator safe for all environments
@@ -33,6 +34,7 @@ export default function Home() {
   const [question, setQuestion] = useState("");
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>(DEFAULT_AGENT_IDS);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
   const MAX_LENGTH = 500;
@@ -83,6 +85,8 @@ export default function Home() {
       conversation_id: conversationId,
       agent_count: selectedAgentIds.length
     });
+
+    setIsStarting(true);
 
     // Navigate to the conversation
     router.push(`/conversation/${conversationId}?trigger=true`);
@@ -228,11 +232,17 @@ export default function Home() {
 
                         <button
                           onClick={handleStartConversation}
-                          disabled={!question.trim() || selectedAgentIds.length < 2}
+                          disabled={!question.trim() || selectedAgentIds.length < 2 || isStarting}
                           className="order-1 sm:order-2 w-full sm:w-auto justify-center sm:justify-start bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 text-white font-bold px-6 py-2.5 rounded-xl shadow-lg shadow-indigo-200 transition-all active:scale-95 flex items-center gap-2"
                         >
-                          Start Debate
-                          <ArrowRight className="w-4 h-4" />
+                          {isStarting ?
+                          <>
+                            Processing...
+                            <Loader2 className="w-4 h-4 animate-spin" />
+                          </>
+                          :
+                          "Start Debate"}
+                          {!isStarting && <ArrowRight className="w-4 h-4" />}
                         </button>
                       </div>
                     </div>

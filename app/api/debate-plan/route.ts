@@ -160,7 +160,7 @@ Create a LEAN, HIGH-IMPACT discussion plan with EXACTLY 5 TURNS:
 STRUCTURE (NON-NEGOTIABLE):
 - Turn 1-2: OPENING (Round 1) - Two agents state their perspectives
 - Turn 3-4: REBUTTAL/DEEPENING (Round 2) - Same agents interact with each other's points
-- Turn 5: SYNTHESIS (Round 3) - Neutral wrap-up with decision criteria
+- Turn 5: SYNTHESIS (Round 3) - Neutral wrap-up by the built-in "neutral_judge" agent
 
 CRITICAL DIRECTOR RULES:
 
@@ -230,9 +230,9 @@ CRITICAL DIRECTOR RULES:
     {
       "round": 3,
       "phase": "SYNTHESIS",
-      "agentId": "any_agent_id",
+      "agentId": "neutral_judge",
       "targetPosition": null,
-      "instruction": "Provide neutral synthesis: 'Consider [Perspective A] if: [conditions]. Consider [Perspective B] if: [conditions].' Under 150 words.",
+      "instruction": "As the Neutral Judge, provide a fair, balanced synthesis: 'Consider [Perspective A] if: [conditions]. Consider [Perspective B] if: [conditions].' Under 150 words.",
       "type": "summary"
     }
   ]
@@ -439,6 +439,16 @@ Question: "$1000/week for life vs $1M lump sum?"
 
 ✅ GOOD Synthesis Instruction:
 "Calculate breakeven (19 years). Show: Choose weekly if 65+ (may not reach breakeven) or have spending problems. Choose lump sum if under 50 and can invest at 7% returns. MUST include 'Critical Numbers' section with calculations."
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRECISION & VERIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Instruct agents to:
+- "Verify any statistics or data points before citing."
+- "Clearly mark illustrative or hypothetical examples (e.g., 'As a hypothetical example...')."
+- "Double-check all math calculations (ROI, breakeven, interest)."
+- "Show your work for any calculations central to the argument."
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

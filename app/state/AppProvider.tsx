@@ -120,9 +120,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             });
           } else {
             console.log("[AppProvider] No migration needed. Hydrating with API data.");
+            const mergedAgents = [...agents];
+            const agentIds = new Set(mergedAgents.map(a => a.id));
+            const { DEFAULT_AGENTS } = await import("../data/defaultAgents");
+
+            DEFAULT_AGENTS.forEach(da => {
+              if (!agentIds.has(da.id)) {
+                mergedAgents.push(da);
+              }
+            });
+
             dispatch({
               type: "HYDRATE_APP",
-              payload: { ...initialAppState, agents, conversations }
+              payload: { ...initialAppState, agents: mergedAgents, conversations }
             });
           }
         } catch (err) {
@@ -144,8 +154,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
               }
             }
           }
-          console.log(`[AppProvider] Hydrating with local data: ${conversations.length} conversations`);
-          dispatch({ type: "HYDRATE_APP", payload: { ...initialAppState, agents: localState.agents || initialAppState.agents, conversations } });
+          // Merge local agents with default agents to ensure built-in agents are always present
+          const mergedAgents = [...localState.agents || []];
+          const defaultAgentIds = new Set(mergedAgents.map(a => a.id));
+
+          import("../data/defaultAgents").then(({ DEFAULT_AGENTS }) => {
+            DEFAULT_AGENTS.forEach(da => {
+              if (!defaultAgentIds.has(da.id)) {
+                mergedAgents.push(da);
+              }
+            });
+          });
+
+          console.log(`[AppProvider] Hydrating with local data: ${conversations.length} conversations, ${mergedAgents.length} agents`);
+          dispatch({ type: "HYDRATE_APP", payload: { ...initialAppState, agents: mergedAgents, conversations } });
         } else {
           console.log("[AppProvider] No local data. Using initial state.");
           dispatch({ type: "HYDRATE_APP", payload: initialAppState });

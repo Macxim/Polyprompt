@@ -36,6 +36,7 @@ export default function ConversationPage() {
 
   // State
   const [thinkingAgent, setThinkingAgent] = useState<Agent | null>(null);
+  const [isPlanning, setIsPlanning] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
 
@@ -137,12 +138,30 @@ export default function ConversationPage() {
         const chunk = decoder.decode(value);
         fullContent += chunk;
 
+        const isRepetition = fullContent.includes("__REPETITION_DETECTED__");
+        const tokenMatch = fullContent.match(/__TOKENS__(.*)$/m);
+        let tokens = undefined;
+
+        if (tokenMatch?.[1]) {
+          try {
+            tokens = JSON.parse(tokenMatch[1]);
+          } catch (e) {
+            console.error("Failed to parse tokens", e);
+          }
+        }
+
+        const cleanedContent = fullContent
+          .replace(/\n?__TOKENS__.*$/, "")
+          .replace(/\n?__REPETITION_DETECTED__.*$/, "");
+
         dispatch({
           type: "UPDATE_MESSAGE",
           payload: {
             conversationId,
             messageId: agentMessage.id,
-            content: fullContent.replace(/__TOKENS__.*$/, ""),
+            content: cleanedContent,
+            ...(tokens && { tokens }),
+            ...(isRepetition && { isRepetition }),
           },
         });
       }
@@ -155,6 +174,7 @@ export default function ConversationPage() {
 
   // Run debate (simplified - calls debate-plan then executes)
   const runDebate = async (userContent: string) => {
+    setIsPlanning(true);
     try {
       // Get debate plan
       const planResponse = await fetch("/api/debate-plan", {
@@ -178,9 +198,11 @@ export default function ConversationPage() {
       const options = plan.options || [];
       const isOpen = plan.isOpen || false;
 
+      setIsPlanning(false);
+
       // Execute each step in the plan
       for (const step of plan.plan) {
-        const agent = participantAgents.find(a => a.id === step.agentId);
+        const agent = state.agents.find(a => a.id === step.agentId);
         if (!agent) continue;
 
         setThinkingAgent(agent);
@@ -233,12 +255,30 @@ export default function ConversationPage() {
           const chunk = decoder.decode(value);
           fullContent += chunk;
 
+          const isRepetition = fullContent.includes("__REPETITION_DETECTED__");
+          const tokenMatch = fullContent.match(/__TOKENS__(.*)$/m);
+          let tokens = undefined;
+
+          if (tokenMatch?.[1]) {
+            try {
+              tokens = JSON.parse(tokenMatch[1]);
+            } catch (e) {
+              console.error("Failed to parse tokens", e);
+            }
+          }
+
+          const cleanedContent = fullContent
+            .replace(/\n?__TOKENS__.*$/, "")
+            .replace(/\n?__REPETITION_DETECTED__.*$/, "");
+
           dispatch({
             type: "UPDATE_MESSAGE",
             payload: {
               conversationId,
               messageId: stepMessage.id,
-              content: fullContent.replace(/__TOKENS__.*$/, ""),
+              content: cleanedContent,
+              ...(tokens && { tokens }),
+              ...(isRepetition && { isRepetition: true }),
             },
           });
         }
@@ -253,6 +293,7 @@ export default function ConversationPage() {
         payload: { message: "Error during debate", type: "error" },
       });
     } finally {
+      setIsPlanning(false);
       setThinkingAgent(null);
     }
   };
@@ -330,7 +371,7 @@ export default function ConversationPage() {
   }
 
   return (
-    <div className="flex flex-col h-screen bg-slate-50" style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 3rem)' }}>
+    <div className="flex flex-col h-screen bg-slate-50">
       <Banner maxWidth="4xl" />
 
       {/* Header */}
@@ -414,11 +455,36 @@ export default function ConversationPage() {
             ))
           )}
 
-          {thinkingAgent && (
-            <ThinkingIndicator agentName={thinkingAgent.name} />
+          {isPlanning && (
+            <ThinkingIndicator agentName="System" />
           )}
 
           <div ref={messagesEndRef} />
+
+          {/* Usage Info */}
+          {conversation.messages.length > 1 && (
+            <p className="inline-block px-3 py-1 bg-slate-100 rounded-xl text-xs text-slate-500 border border-slate-200/50">
+              This conversation had a total usage of <span className="font-bold">{
+                conversation.messages.reduce((total, msg) => total + (msg.tokens?.total || 0), 0).toLocaleString()
+              } tokens</span>{" "}
+              for an estimated cost of <span className="text-indigo-500/80 font-bold">
+                ${
+                  conversation.messages.reduce((total, msg) => {
+                    const pricing: Record<string, { input: number; output: number }> = {
+                      'gpt-4o': { input: 2.50, output: 10.00 },
+                      'gpt-4o-mini': { input: 0.15, output: 0.60 },
+                      'gpt-3.5-turbo': { input: 0.50, output: 1.50 }
+                    };
+                    const agent = state.agents.find(a => a.id === msg.agentId);
+                    const modelPricing = pricing[agent?.model || 'gpt-4o-mini'] || pricing['gpt-4o-mini'];
+                    const cost = ((msg.tokens?.prompt || 0) * modelPricing.input / 1_000_000) +
+                                ((msg.tokens?.completion || 0) * modelPricing.output / 1_000_000);
+                    return total + cost;
+                  }, 0).toFixed(4)
+                }
+              </span>.
+            </p>
+          )}
         </div>
       </main>
 

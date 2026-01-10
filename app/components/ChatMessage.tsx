@@ -8,6 +8,7 @@ import ThinkingIndicator from "./ThinkingIndicator";
 import { useApp } from "../state/AppProvider";
 
 import StanceBadge from "./StanceBadge";
+import { RefreshCcw } from "lucide-react";
 
 type ChatMessageProps = {
   msg: Message;
@@ -89,6 +90,12 @@ const ChatMessage = React.memo(({ msg, agents, allMessages = [] }: ChatMessagePr
                     {msg.agentName}
                   </span>
                   <StanceBadge stance={msg.stance} round={msg.round} phase={msg.phase} />
+                  {msg.isRepetition && (
+                    <div className="flex items-center gap-1.5 px-2 py-0.5 bg-amber-50 border border-amber-200 rounded-full">
+                       <RefreshCcw className="w-2.5 h-2.5 text-amber-600" />
+                       <span className="text-[10px] font-bold text-amber-700 uppercase tracking-tight">Recurring Point</span>
+                    </div>
+                  )}
                 </div>
 
                {msg.respondingToId && respondingToName && (

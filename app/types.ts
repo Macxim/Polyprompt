@@ -30,6 +30,7 @@ export type Message = {
   stance?: string; // Detected stance or label (e.g., 'pro', 'con', or a specific option name)
   round?: number;
   phase?: string;
+  isRepetition?: boolean;
 };
 
 export type ConversationTemplate = {

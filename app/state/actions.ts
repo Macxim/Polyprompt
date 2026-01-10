@@ -28,6 +28,7 @@ export type Action =
         stance?: string;
         round?: number;
         phase?: string;
+        isRepetition?: boolean;
       };
     }
   | {

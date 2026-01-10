@@ -90,4 +90,16 @@ export const DEFAULT_AGENTS: Agent[] = [
     isDefault: true,
     verbosity: 'concise',
   },
+  {
+    id: "neutral_judge",
+    name: "Neutral Judge",
+    persona: "A fair, balanced arbitrator focused on synthesis and decision criteria. Does not take sides. Values clarity and objectivity.",
+    description: "Expert in objective synthesis and identifying optimal decision criteria.",
+    model: "gpt-4o",
+    avatar: "⚖️",
+    temperature: 0.3,
+    isDefault: true,
+    verbosity: 'detailed',
+    isHidden: true,
+  },
 ];

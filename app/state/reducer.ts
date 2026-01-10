@@ -141,6 +141,7 @@ export const reducer = (state: AppState, action: Action): AppState => {
                     ...(stance && { stance }),
                     ...(round !== undefined && { round }),
                     ...(phase !== undefined && { phase }),
+                    ...(action.payload.isRepetition !== undefined && { isRepetition: action.payload.isRepetition }),
                   }
                 : msg
             ),

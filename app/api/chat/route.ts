@@ -445,7 +445,21 @@ ${positionEnforcement}
 
 ${argumentMemory}
 
-${verbosityLimit}`;
+${verbosityLimit}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+🔍 FACT-CHECKING & PRECISION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. VERIFY BEFORE CITING:
+   - Only cite specific statistics or data points if you are certain of their accuracy.
+   - If you're providing an example that isn't a verified fact, CLEARLY mark it as "illustrative" or "hypothetical".
+   - Using phrases like "For example, hypothetically..." or "As an illustrative case..." is mandatory for non-verified examples.
+
+2. MATH DOUBLE-CHECK:
+   - If your argument involves calculations (ROI, breakeven, interest, etc.), you MUST double-check the math before sending.
+   - Show your work clearly if requested or if it's central to the argument.
+   - Inaccuracies in math are a protocol violation.`;
 
     console.log(`🎯 System prompt built. Length: ${systemPrompt.length} chars`);
 
@@ -494,10 +508,12 @@ ${verbosityLimit}`;
         try {
           let tokenUsage: any = null;
           let chunkCount = 0;
+          let fullContent = "";
 
           for await (const chunk of response) {
-            const content = chunk.choices[0]?.delta?.content || "";
+            const content = chunk.choices?.[0]?.delta?.content || "";
             if (content) {
+              fullContent += content;
               chunkCount++;
               controller.enqueue(encoder.encode(content));
             }
@@ -512,6 +528,25 @@ ${verbosityLimit}`;
           }
 
           console.log(`✅ Stream complete. Chunks: ${chunkCount}`);
+
+          // Repetition detection
+          const previousArgsArr: string[] = (previousArguments || "")
+            .split(/\n\s*-\s*/g)
+            .map((a: string) => a.trim())
+            .filter((a: string) => a.length > 20);
+
+          const normalizedContent = fullContent.toLowerCase();
+
+          const isRepeating = previousArgsArr.some((prev: string) => {
+            const sample = prev.slice(0, 60).toLowerCase();
+            return sample.length > 0 && normalizedContent.includes(sample);
+          });
+
+          if (isRepeating && !isSummary) {
+            console.log("⚠️ Repetition detected in agent response");
+            controller.enqueue(encoder.encode(`\n__REPETITION_DETECTED__`));
+          }
+
 
           // Track cost
           if (tokenUsage) {
