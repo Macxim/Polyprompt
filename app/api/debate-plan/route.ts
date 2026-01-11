@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { checkQuestionSafety, getSafetyErrorResponse } from "@/lib/safety";
 
 export const runtime = "nodejs";
 
@@ -100,6 +101,23 @@ export async function POST(req: Request) {
     }
 
     const openai = new OpenAI({ apiKey });
+
+    // ------------------------------------------------------------------------
+    // SAFETY CHECK
+    // ------------------------------------------------------------------------
+    console.log("🛡️ Running safety check on:", prompt.substring(0, 100));
+
+    const safetyResult = await checkQuestionSafety(openai, prompt);
+
+    if (!safetyResult.safe) {
+      console.log("⚠️ UNSAFE QUESTION BLOCKED:", safetyResult.reason);
+      return NextResponse.json(
+        getSafetyErrorResponse(safetyResult),
+        { status: 400 }
+      );
+    }
+
+    console.log("✅ Safety check passed");
 
     // ------------------------------------------------------------------------
     // ANALYSIS (Open vs Comparative)

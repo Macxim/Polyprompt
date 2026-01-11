@@ -35,6 +35,10 @@ export type Action =
       type: "RENAME_CONVERSATION";
       payload: { conversationId: string; newTitle: string };
     }
+  | {
+      type: "DELETE_MESSAGE";
+      payload: { conversationId: string; messageId: string };
+    }
   // UI
   | { type: "OPEN_AGENT_MODAL" }
   | { type: "CLOSE_AGENT_MODAL" }

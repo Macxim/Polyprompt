@@ -5,6 +5,7 @@ import { getApiKeyForUser } from "@/lib/get-api-key";
 import { checkRateLimit } from "@/lib/rate-limit";
 import posthog from "@/lib/posthog";
 import { keys, redis, ensureConnection } from "@/lib/redis";
+import { checkQuestionSafety, getSafetyErrorResponse } from "@/lib/safety";
 
 export const runtime = "nodejs";
 
@@ -324,6 +325,27 @@ export async function POST(req: Request) {
     }
 
     const openai = new OpenAI({ apiKey });
+
+    // ========================================================================
+    // SAFETY CHECK FOR DIRECT CHAT (BYPASS PROTECTION)
+    // ========================================================================
+    // If this is the first message and not part of a planned debate, check safety
+    if (conversationHistory.length === 0 && !debateTurn) {
+      console.log("🛡️ Running chat safety check...");
+
+      const userMessage = messages.find((m: any) => m.role === 'user')?.content || '';
+
+      const safetyResult = await checkQuestionSafety(openai, userMessage);
+
+      if (!safetyResult.safe) {
+        console.log("⚠️ UNSAFE CHAT DETECTED:", safetyResult.reason);
+
+        return new Response(JSON.stringify(getSafetyErrorResponse(safetyResult)), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+    }
 
     // Rate limiting for authenticated users on system key
     const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;

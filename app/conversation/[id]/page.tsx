@@ -6,6 +6,7 @@ import { useApp } from "../../state/AppProvider";
 import ChatMessage from "../../components/ChatMessage";
 import ThinkingIndicator from "../../components/ThinkingIndicator";
 import Banner from "../../components/Banner";
+import { SafetyResponse } from "../../components/SafetyResponse";
 import { Message, Agent } from "../../types";
 import {
   ArrowLeft,
@@ -39,6 +40,7 @@ export default function ConversationPage() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [safetyError, setSafetyError] = useState<{ message: string; reason?: string } | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -125,7 +127,25 @@ export default function ConversationPage() {
         }),
       });
 
-      if (!response.ok) throw new Error("Failed to get response");
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.unsafe) {
+          setSafetyError({
+            message: errorData.message,
+            reason: errorData.reason
+          });
+
+          // Remove the empty streaming message
+          dispatch({
+            type: "DELETE_MESSAGE",
+            payload: { conversationId, messageId: agentMessage.id }
+          });
+
+          setThinkingAgent(null);
+          return;
+        }
+        throw new Error(errorData.error || "Failed to get response");
+      }
 
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
@@ -187,9 +207,20 @@ export default function ConversationPage() {
       });
 
       if (!planResponse.ok) {
+        const errorData = await planResponse.json();
+
+        if (errorData.unsafe) {
+          setSafetyError({
+            message: errorData.message,
+            reason: errorData.reason
+          });
+          setIsPlanning(false);
+          return;
+        }
+
         dispatch({
           type: "SET_BANNER",
-          payload: { message: "Failed to plan debate", type: "error" },
+          payload: { message: errorData.error || "Failed to plan debate", type: "error" },
         });
         return;
       }
@@ -440,7 +471,12 @@ export default function ConversationPage() {
         className="flex-1 overflow-y-auto"
       >
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-          {conversation.messages.length === 0 ? (
+          {safetyError ? (
+            <SafetyResponse
+              message={safetyError.message}
+              reason={safetyError.reason}
+            />
+          ) : conversation.messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-400">Start the conversation below</p>
             </div>
