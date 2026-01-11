@@ -4,7 +4,12 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { checkQuestionSafety, getSafetyErrorResponse } from "@/lib/safety";
+import {
+  checkQuestionSafety,
+  getSafetyErrorResponse,
+  checkQuestionQuality,
+  getQualityErrorResponse
+} from "@/lib/safety";
 
 export const runtime = "nodejs";
 
@@ -118,6 +123,22 @@ export async function POST(req: Request) {
     }
 
     console.log("✅ Safety check passed");
+
+    // ------------------------------------------------------------------------
+    // QUALITY CHECK
+    // ------------------------------------------------------------------------
+    console.log("💎 Running quality check...");
+    const qualityResult = await checkQuestionQuality(openai, prompt);
+
+    if (!qualityResult.debatable) {
+      console.log("⚠️ LOW QUALITY QUESTION BLOCKED:", qualityResult.reason);
+      return NextResponse.json(
+        getQualityErrorResponse(qualityResult),
+        { status: 400 }
+      );
+    }
+
+    console.log("✅ Quality check passed");
 
     // ------------------------------------------------------------------------
     // ANALYSIS (Open vs Comparative)

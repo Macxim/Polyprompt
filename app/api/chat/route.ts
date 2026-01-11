@@ -5,7 +5,12 @@ import { getApiKeyForUser } from "@/lib/get-api-key";
 import { checkRateLimit } from "@/lib/rate-limit";
 import posthog from "@/lib/posthog";
 import { keys, redis, ensureConnection } from "@/lib/redis";
-import { checkQuestionSafety, getSafetyErrorResponse } from "@/lib/safety";
+import {
+  checkQuestionSafety,
+  getSafetyErrorResponse,
+  checkQuestionQuality,
+  getQualityErrorResponse
+} from "@/lib/safety";
 
 export const runtime = "nodejs";
 
@@ -39,14 +44,14 @@ INTELLIGENCE RULES:
    - Risk involved? → Quantify probability, cite historical data, show downside
 
 2️⃣ NO VAGUE CONDITIONS (This is CRITICAL)
-   ❌ BAD: "Choose X if you value security"
-   ✅ GOOD: "Choose X if you're 65+ and may not reach 20-year breakeven"
+❌ BAD: "Choose X if you value security"
+✅ GOOD: "Choose X if you're 65+ and may not reach 20-year breakeven"
 
-   ❌ BAD: "Choose Y if you prioritize growth"
-   ✅ GOOD: "Choose Y if you're under 30 with 6+ months savings and work in law/finance"
+❌ BAD: "Choose Y if you prioritize growth"
+✅ GOOD: "Choose Y if you're under 30 with 6+ months savings and work in law/finance"
 
-   ❌ BAD: "Choose X if it fits your situation"
-   ✅ GOOD: "Choose X if you have kids under 10 who need your time now"
+❌ BAD: "Choose X if it fits your situation"
+✅ GOOD: "Choose X if you have kids under 10 who need your time now"
 
 3️⃣ INCLUDE MATH WHEN RELEVANT
    - Comparing $ amounts? → Show calculations, breakeven analysis
@@ -341,6 +346,17 @@ export async function POST(req: Request) {
         console.log("⚠️ UNSAFE CHAT DETECTED:", safetyResult.reason);
 
         return new Response(JSON.stringify(getSafetyErrorResponse(safetyResult)), {
+          status: 400,
+          headers: { "Content-Type": "application/json" }
+        });
+      }
+
+      console.log("💎 Running chat quality check...");
+      const qualityResult = await checkQuestionQuality(openai, userMessage);
+
+      if (!qualityResult.debatable) {
+        console.log("⚠️ LOW QUALITY CHAT DETECTED:", qualityResult.reason);
+        return new Response(JSON.stringify(getQualityErrorResponse(qualityResult)), {
           status: 400,
           headers: { "Content-Type": "application/json" }
         });

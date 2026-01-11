@@ -7,6 +7,7 @@ import ChatMessage from "../../components/ChatMessage";
 import ThinkingIndicator from "../../components/ThinkingIndicator";
 import Banner from "../../components/Banner";
 import { SafetyResponse } from "../../components/SafetyResponse";
+import { QualityResponse } from "../../components/QualityResponse";
 import { Message, Agent } from "../../types";
 import {
   ArrowLeft,
@@ -40,7 +41,6 @@ export default function ConversationPage() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
-  const [safetyError, setSafetyError] = useState<{ message: string; reason?: string } | null>(null);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -130,9 +130,42 @@ export default function ConversationPage() {
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.unsafe) {
-          setSafetyError({
-            message: errorData.message,
-            reason: errorData.reason
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                safetyError: {
+                  message: errorData.message,
+                  reason: errorData.reason
+                }
+              }
+            }
+          });
+
+          // Remove the empty streaming message
+          dispatch({
+            type: "DELETE_MESSAGE",
+            payload: { conversationId, messageId: agentMessage.id }
+          });
+
+          setThinkingAgent(null);
+          return;
+        }
+
+        if (errorData.lowQuality) {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                qualityError: {
+                  message: errorData.message,
+                  reason: errorData.reason,
+                  category: errorData.category
+                }
+              }
+            }
           });
 
           // Remove the empty streaming message
@@ -210,9 +243,35 @@ export default function ConversationPage() {
         const errorData = await planResponse.json();
 
         if (errorData.unsafe) {
-          setSafetyError({
-            message: errorData.message,
-            reason: errorData.reason
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                safetyError: {
+                  message: errorData.message,
+                  reason: errorData.reason
+                }
+              }
+            }
+          });
+          setIsPlanning(false);
+          return;
+        }
+
+        if (errorData.lowQuality) {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                qualityError: {
+                  message: errorData.message,
+                  reason: errorData.reason,
+                  category: errorData.category
+                }
+              }
+            }
           });
           setIsPlanning(false);
           return;
@@ -471,10 +530,16 @@ export default function ConversationPage() {
         className="flex-1 overflow-y-auto"
       >
         <div className="max-w-6xl mx-auto px-4 py-6 space-y-4">
-          {safetyError ? (
+          {conversation.safetyError ? (
             <SafetyResponse
-              message={safetyError.message}
-              reason={safetyError.reason}
+              message={conversation.safetyError.message}
+              reason={conversation.safetyError.reason}
+            />
+          ) : conversation.qualityError ? (
+            <QualityResponse
+              message={conversation.qualityError.message}
+              reason={conversation.qualityError.reason}
+              category={conversation.qualityError.category}
             />
           ) : conversation.messages.length === 0 ? (
             <div className="text-center py-12">

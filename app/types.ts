@@ -49,6 +49,12 @@ export type Conversation = {
   messages: Message[];
   participantIds: string[]; // Agent IDs in this conversation
   updatedAt?: number;
+  safetyError?: { message: string; reason?: string } | null;
+  qualityError?: {
+    message: string;
+    reason?: string;
+    category?: 'trivial' | 'nonsensical' | 'already_decided' | 'not_actionable' | 'good'
+  } | null;
 };
 
 export type SharedConversation = Conversation & {
