@@ -6,6 +6,7 @@ import { useApp } from "../../state/AppProvider";
 import ChatMessage from "../../components/ChatMessage";
 import ThinkingIndicator from "../../components/ThinkingIndicator";
 import Banner from "../../components/Banner";
+import AvatarDisplay from "../../components/AvatarDisplay";
 import { SafetyResponse } from "../../components/SafetyResponse";
 import { QualityResponse } from "../../components/QualityResponse";
 import { Message, Agent } from "../../types";
@@ -41,6 +42,7 @@ export default function ConversationPage() {
   const [isPlanning, setIsPlanning] = useState(false);
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
+  const [showParticipantsMenu, setShowParticipantsMenu] = useState(false);
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -483,10 +485,49 @@ export default function ConversationPage() {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex items-center gap-1 text-xs text-slate-500">
-              <Users className="w-3.5 h-3.5" />
-              <span>{participantAgents.length}</span>
+            <div className="relative">
+              <button
+                onClick={() => setShowParticipantsMenu(!showParticipantsMenu)}
+                className="flex items-center gap-1.5 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-lg transition-colors border border-slate-200"
+              >
+                <Users className="w-4 h-4" />
+                <span className="text-xs font-bold">{participantAgents.length}</span>
+                <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${showParticipantsMenu ? 'rotate-180' : ''}`} />
+              </button>
+
+              {showParticipantsMenu && (
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowParticipantsMenu(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-2 w-72 bg-white rounded-2xl shadow-xl border border-slate-100 py-3 z-50 animate-in fade-in zoom-in-95 duration-200 origin-top-right">
+                    <div className="px-4 pb-2 mb-2 border-b border-slate-50 text-[10px] uppercase tracking-widest font-bold text-slate-400">
+                      Participating Agents
+                    </div>
+                    <div className="max-h-80 overflow-y-auto px-2 space-y-1">
+                      {participantAgents.map((agent) => (
+                        <div
+                          key={agent.id}
+                          className="flex items-start gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors group cursor-default"
+                        >
+                          <AvatarDisplay agent={agent} size="sm" />
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-bold text-slate-800 group-hover:text-indigo-600 transition-colors">
+                              {agent.name}
+                            </div>
+                            <div className="text-[10px] text-slate-500 line-clamp-2 leading-relaxed">
+                              {agent.persona}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
+
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
@@ -497,20 +538,26 @@ export default function ConversationPage() {
               </button>
 
               {showExportMenu && (
-                <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
-                  <button
-                    onClick={() => handleExport("markdown")}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
-                  >
-                    Export as Markdown
-                  </button>
-                  <button
-                    onClick={() => handleExport("json")}
-                    className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
-                  >
-                    Export as JSON
-                  </button>
-                </div>
+                <>
+                  <div
+                    className="fixed inset-0 z-40"
+                    onClick={() => setShowExportMenu(false)}
+                  />
+                  <div className="absolute top-full right-0 mt-1 w-48 bg-white rounded-lg shadow-xl border border-slate-100 py-1 z-50 animate-in fade-in zoom-in-95 duration-200">
+                    <button
+                      onClick={() => handleExport("markdown")}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                    >
+                      Export as Markdown
+                    </button>
+                    <button
+                      onClick={() => handleExport("json")}
+                      className="w-full text-left px-4 py-2 text-sm text-slate-600 hover:bg-slate-50 hover:text-indigo-600"
+                    >
+                      Export as JSON
+                    </button>
+                  </div>
+                </>
               )}
             </div>
             <button
