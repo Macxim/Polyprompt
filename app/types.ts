@@ -55,6 +55,7 @@ export type Conversation = {
     reason?: string;
     category?: 'trivial' | 'nonsensical' | 'already_decided' | 'not_actionable' | 'good'
   } | null;
+  quotaError?: { message: string } | null;
 };
 
 export type SharedConversation = Conversation & {

@@ -4,6 +4,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getApiKeyForUser } from "@/lib/get-api-key";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { redis, keys } from "@/lib/redis";
 import {
   checkQuestionSafety,
   getSafetyErrorResponse,
@@ -66,7 +67,7 @@ export async function POST(req: Request) {
         return NextResponse.json(
           {
             error: "Daily Limit Reached",
-            message: "You've used your 3 free questions for today. Sign in for more.",
+            message: "You've used your 3 free questions for today. Come back tomorrow or sign in for more.",
           },
           { status: 429 }
         );
@@ -74,6 +75,31 @@ export async function POST(req: Request) {
 
       // Assign temporary ID for unauth users to allow flow to continue (though getApiKey will return null/sys key)
       userId = `guest-${ip}`;
+    } else {
+      // For authenticated users, if they use the system key, check their daily limit
+      const apiKey = await getApiKeyForUser(userId, session?.user?.email || undefined);
+      const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
+
+      if (isUsingSystemKey) {
+        const dailyKey = keys.userDailyMessages(userId);
+        const currentCountStr = await redis.get(dailyKey);
+        const currentCount = parseInt(currentCountStr || "0", 10);
+        const DAILY_LIMIT = 3;
+
+        if (currentCount >= DAILY_LIMIT) {
+          return NextResponse.json(
+            {
+              error: "Daily Limit Reached",
+              message: `You've used all ${DAILY_LIMIT} free questions today. Add your own API key for unlimited access.`,
+            },
+            { status: 429 }
+          );
+        }
+
+        // Increment usage
+        const newCount = await redis.incr(dailyKey);
+        if (newCount === 1) await redis.expire(dailyKey, 86400);
+      }
     }
 
 

@@ -21,7 +21,7 @@ export async function GET() {
     const dailyKey = keys.userDailyMessages(session.user.id);
     const currentCountStr = await redis.get(dailyKey);
     const currentCount = parseInt(currentCountStr || "0", 10);
-    remainingMessages = Math.max(0, 10 - currentCount); // 10 is the DAILY_MESSAGE_LIMIT
+    remainingMessages = Math.max(0, 3 - currentCount); // 3 is the DAILY_MESSAGE_LIMIT
   }
 
   return NextResponse.json({

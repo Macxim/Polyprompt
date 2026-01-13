@@ -1,5 +1,5 @@
 "use client";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useApp } from "./state/AppProvider";
@@ -35,9 +35,31 @@ export default function Home() {
   const [selectedAgentIds, setSelectedAgentIds] = useState<string[]>(DEFAULT_AGENT_IDS);
   const [showAgentPicker, setShowAgentPicker] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
+  const [usage, setUsage] = useState<{ hasApiKey: boolean; remainingMessages: number | null }>({
+    hasApiKey: false,
+    remainingMessages: null
+  });
   const questionInputRef = useRef<HTMLTextAreaElement>(null);
 
   const MAX_LENGTH = 500;
+
+  useEffect(() => {
+    if (status === "authenticated") {
+      fetchUsage();
+    }
+  }, [status]);
+
+  const fetchUsage = async () => {
+    try {
+      const res = await fetch("/api/user/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setUsage(data);
+      }
+    } catch (err) {
+      console.error("Error fetching usage:", err);
+    }
+  };
 
   const toggleAgent = (agentId: string) => {
     setSelectedAgentIds(prev =>
@@ -115,7 +137,7 @@ export default function Home() {
                 )}
                 <button
                   onClick={() => signOut({ callbackUrl: "/" })}
-                  className="text-xs font-bold text-slate-500 hover:text-red-600 transition-colors flex items-center gap-1.5"
+                  className="text-xs font-bold text-slate-500 hover:text-indigo-600 transition-colors flex items-center gap-1.5"
                 >
                   <span className="hidden sm:inline">{session.user?.name?.split(" ")[0]}</span>
                   <LogOut className="w-3.5 h-3.5" />
@@ -201,6 +223,31 @@ export default function Home() {
                 <p className="text-slate-500 text-lg max-w-xl mx-auto mb-8 leading-relaxed">
                   AI agents argue different perspectives so you can make better decisions.
                 </p>
+
+                {/* Usage Notice */}
+                <div className="flex justify-center mb-6">
+                  {usage.hasApiKey ? (
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-50 border border-emerald-100 text-emerald-700 text-[11px] font-bold shadow-sm">
+                      <Zap className="w-3.5 h-3.5" />
+                      Unlimited (Personal API Key Active)
+                    </div>
+                  ) : usage.remainingMessages !== null ? (
+                    <Link
+                      href="/settings"
+                      className="group flex items-center gap-2 px-3 py-1.5 rounded-full bg-amber-50 border border-amber-100 text-amber-700 text-[11px] font-bold shadow-sm hover:bg-amber-100 transition-all"
+                    >
+                      <Cpu className="w-3.5 h-3.5 animate-pulse" />
+                      {usage.remainingMessages} {usage.remainingMessages === 1 ? 'free question' : 'free questions'} left today
+                      <span className="opacity-40 font-normal">|</span>
+                      <span className="group-hover:text-indigo-600 transition-colors">Go Unlimited</span>
+                    </Link>
+                  ) : status === "unauthenticated" && (
+                     <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-slate-100 border border-slate-200 text-slate-500 text-[11px] font-bold shadow-sm">
+                      <Zap className="w-3.5 h-3.5" />
+                      3 free questions per day for guests
+                    </div>
+                  )}
+                </div>
 
                 {/* Question Input */}
                 <div className="max-w-2xl mx-auto mb-6">

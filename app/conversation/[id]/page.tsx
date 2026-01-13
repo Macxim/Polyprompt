@@ -9,13 +9,17 @@ import Banner from "../../components/Banner";
 import AvatarDisplay from "../../components/AvatarDisplay";
 import { SafetyResponse } from "../../components/SafetyResponse";
 import { QualityResponse } from "../../components/QualityResponse";
+import { QuotaLimitResponse } from "../../components/QuotaLimitResponse";
 import { Message, Agent } from "../../types";
+import Link from "next/link";
 import {
   ArrowLeft,
   Users,
-  Trash2,
   ChevronDown,
   Download,
+  Trash2,
+  Cpu,
+  Zap,
   MessageSquarePlus
 } from "lucide-react";
 
@@ -43,12 +47,32 @@ export default function ConversationPage() {
   const [showScrollButton, setShowScrollButton] = useState(false);
   const [showExportMenu, setShowExportMenu] = useState(false);
   const [showParticipantsMenu, setShowParticipantsMenu] = useState(false);
+  const [usage, setUsage] = useState<{ hasApiKey: boolean; remainingMessages: number | null }>({
+    hasApiKey: false,
+    remainingMessages: null
+  });
 
   // Refs
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   const processedTriggerRef = useRef(false);
+
+  useEffect(() => {
+    fetchUsage();
+  }, []);
+
+  const fetchUsage = async () => {
+    try {
+      const res = await fetch("/api/user/settings");
+      if (res.ok) {
+        const data = await res.json();
+        setUsage(data);
+      }
+    } catch (err) {
+      console.error("Error fetching usage:", err);
+    }
+  };
 
   // Initialize from URL params
   useEffect(() => {
@@ -131,6 +155,7 @@ export default function ConversationPage() {
 
       if (!response.ok) {
         const errorData = await response.json();
+
         if (errorData.unsafe) {
           dispatch({
             type: "UPDATE_CONVERSATION",
@@ -179,6 +204,21 @@ export default function ConversationPage() {
           setThinkingAgent(null);
           return;
         }
+
+        if (response.status === 429) {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                quotaError: { message: errorData.message || "Daily limit reached." }
+              }
+            }
+          });
+          setThinkingAgent(null);
+          return;
+        }
+
         throw new Error(errorData.error || "Failed to get response");
       }
 
@@ -216,7 +256,7 @@ export default function ConversationPage() {
             messageId: agentMessage.id,
             content: cleanedContent,
             ...(tokens && { tokens }),
-            ...(isRepetition && { isRepetition }),
+            ...(isRepetition && { isRepetition: true }),
           },
         });
       }
@@ -243,6 +283,20 @@ export default function ConversationPage() {
 
       if (!planResponse.ok) {
         const errorData = await planResponse.json();
+
+        if (planResponse.status === 429) {
+          dispatch({
+            type: "UPDATE_CONVERSATION",
+            payload: {
+              id: conversationId,
+              changes: {
+                quotaError: { message: errorData.message || "Daily limit reached." }
+              }
+            }
+          });
+          setIsPlanning(false);
+          return;
+        }
 
         if (errorData.unsafe) {
           dispatch({
@@ -334,7 +388,22 @@ export default function ConversationPage() {
           }),
         });
 
-        if (!response.ok) continue;
+        if (!response.ok) {
+          if (response.status === 429) {
+            const errorData = await response.json();
+            dispatch({
+              type: "UPDATE_CONVERSATION",
+              payload: {
+                id: conversationId,
+                changes: {
+                  quotaError: { message: errorData.message || "Daily limit reached." }
+                }
+              }
+            });
+            break; // Stop the debate
+          }
+          continue;
+        }
 
         const reader = response.body?.getReader();
         const decoder = new TextDecoder();
@@ -528,6 +597,23 @@ export default function ConversationPage() {
               )}
             </div>
 
+            {/* Usage Indicator */}
+            {usage.hasApiKey ? (
+              <div className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-emerald-50 text-emerald-600 rounded-lg border border-emerald-100/50" title="Unlimited (Personal Key Active)">
+                <Zap className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-tight">Unlimited</span>
+              </div>
+            ) : usage.remainingMessages !== null && (
+              <Link
+                href="/settings"
+                className="hidden sm:flex items-center gap-1.5 px-2 py-1 bg-amber-50 text-amber-600 hover:bg-amber-100 rounded-lg border border-amber-100/50 transition-colors"
+                title={`${usage.remainingMessages} questions left today. Click to go unlimited.`}
+              >
+                <Cpu className="w-3.5 h-3.5" />
+                <span className="text-[10px] font-bold uppercase tracking-tight">{usage.remainingMessages} left</span>
+              </Link>
+            )}
+
             <div className="relative">
               <button
                 onClick={() => setShowExportMenu(!showExportMenu)}
@@ -582,13 +668,23 @@ export default function ConversationPage() {
               message={conversation.safetyError.message}
               reason={conversation.safetyError.reason}
             />
-          ) : conversation.qualityError ? (
+          ) : null}
+
+          {/* Quality Notice */}
+          {conversation?.qualityError && (
             <QualityResponse
               message={conversation.qualityError.message}
               reason={conversation.qualityError.reason}
               category={conversation.qualityError.category}
             />
-          ) : conversation.messages.length === 0 ? (
+          )}
+
+          {/* Quota Notice */}
+          {conversation?.quotaError && (
+            <QuotaLimitResponse message={conversation.quotaError.message} />
+          )}
+
+          {conversation.messages.length === 0 ? (
             <div className="text-center py-12">
               <p className="text-slate-400">Start the conversation below</p>
             </div>

@@ -14,7 +14,7 @@ import {
 
 export const runtime = "nodejs";
 
-const DAILY_MESSAGE_LIMIT = 10;
+const DAILY_MESSAGE_LIMIT = 3;
 const BUDGET_LIMIT = 30.0;
 
 // ============================================================================
@@ -283,7 +283,9 @@ export async function POST(req: Request) {
 
       const isNewConversation = conversationHistory.length === 0;
 
-      if (isNewConversation || debateTurn) {
+      // Only rate limit standalone messages (non-debate turns)
+      // Debate turns are already rate-limited in api/debate-plan
+      if (!debateTurn) {
         const { success } = await checkRateLimit(ip);
         if (!success) {
           return new Response(JSON.stringify({
@@ -365,9 +367,12 @@ export async function POST(req: Request) {
 
     // Rate limiting for authenticated users on system key
     const isUsingSystemKey = apiKey === process.env.OPENAI_API_KEY;
-    if (session?.user?.id && isUsingSystemKey && countAsUserMessage) {
+    // Only count standalone messages (non-debate turns)
+    // Debate turns are handled in api/debate-plan
+    if (session?.user?.id && isUsingSystemKey && !debateTurn) {
       const dailyKey = keys.userDailyMessages(session.user.id);
-      const currentCount = parseInt((await redis.get(dailyKey)) || "0", 10);
+      const currentCountStr = await redis.get(dailyKey);
+      const currentCount = parseInt(currentCountStr || "0", 10);
 
       if (currentCount >= DAILY_MESSAGE_LIMIT) {
         return new Response(JSON.stringify({
